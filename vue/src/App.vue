@@ -2,17 +2,48 @@
 export default {
   data () {
     return {
-      addNovelOpen: false
+      addNovelOpen: false,
+      link: '',
     }
   },
   methods: {
-    changeMsg () {
-      this.msg = 'Welcome to Your Vue.js App (changed)'
-    }
+    openAddNovel () {
+      this.addNovelOpen = true
+      setTimeout(() => {
+        this.$refs.link.select()
+      }, 1)
+    },
+    addNovel() {
+      fetch('http://localhost:3124/api/add-novel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: this.link,
+        }),
+      })
+      .then(res => res.json())
+      .then(res => {
+        console.log(res)
+      })
+      this.link = ''
+      this.addNovelOpen = false
+    },
+    loadNovels() {
+      let limit = this.$refs.rows.clientHeight / 35;
+      limit = Math.floor(limit);
+      fetch('http://localhost:3124/api/get-novels?limit=' + limit)
+      .then(res => res.json())
+      .then(res => {
+        console.log(res)
+      })
+    },
   },
   mounted () {
     let html = this.$refs.rows.innerHTML;
     this.$refs.rows.innerHTML = html.repeat(100);
+    this.loadNovels();
   }
 }
 </script>
@@ -27,16 +58,16 @@ export default {
       <span class="multi-select">Custom</span>
     </div>
     <div class="subtitle">Link</div>
-    <input type="text" v-model="link" placeholder="https://ncode.syosetu.com/n9001/">
+    <input type="text" v-model="link" placeholder="https://ncode.syosetu.com/..." ref="link" />
     <div class="buttons">
       <button class="secondary" @click="addNovelOpen = false">Cancel</button>
-      <button>Add</button>
+      <button @click="addNovel">Add</button>
     </div>
   </div>
 </div>
 <div class="navbar">
   <button>Translated</button>
-  <button @click="addNovelOpen = true">Add Novel</button>
+  <button @click="openAddNovel">Add Novel</button>
 </div>
 <div class="novels">
   <div class="header">
@@ -46,7 +77,10 @@ export default {
   </div>
   <div class="rows" ref="rows">
     <div class="row">
-      <span class="material-icons-outlined">link</span>
+      <div class="left">
+        <span class="material-icons">open_in_new</span>
+        <span class="material-icons-outlined">link</span>
+      </div>
       <span>4/3/2022</span>
       <span>Very long novel title</span>
       <span class="download">12/34<span class="material-icons filled">download</span></span>
@@ -83,20 +117,24 @@ html, body, #app {
 }
 .header {
   display: grid;
-  grid-template-columns: 220px 1fr 150px;
+  grid-template-columns: 230px 1fr 150px;
   font-weight: bold;
   padding: 10px 0;
 }
 .header .first {
-  padding-left: 60px;
+  padding-left: 70px;
 }
 .rows {
   height: calc(100% - 39px);
   overflow: auto;
 }
+.left {
+  display: flex;
+  gap: 8px;
+}
 .row {
   display: grid;
-  grid-template-columns: 60px 160px 1fr 120px 30px;
+  grid-template-columns: 70px 160px 1fr 120px 30px;
   border-bottom: 1px solid #efefef;
   padding: 5px 0;
 }

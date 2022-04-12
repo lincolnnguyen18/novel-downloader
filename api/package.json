@@ -1,0 +1,15 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.3",
+    "html-to-formatted-text": "^2.7.0",
+    "jssoup": "^0.0.15",
+    "mysql2": "^2.3.3",
+    "node-fetch": "^3.2.3"
+  },
+  "type": "module"
+}
