@@ -32,7 +32,7 @@ const translate = async (text) => {
       original = '';
     }
   }
-  return result.trim();
+  return result;
 }
 
 const timer = ms => new Promise(res => setTimeout(res, ms))
@@ -227,6 +227,13 @@ router.post('/add-novel', (req, res) => {
   });
 });
 
+const truncateString = (str, num) => {
+  if (str.length <= num) {
+    return str;
+  }
+  return str.slice(0, num) + '...';
+};
+
 router.get('/get-novel-text', (req, res) => {
   const { id, title } = req.query;
   console.log(id, title);
@@ -235,9 +242,30 @@ router.get('/get-novel-text', (req, res) => {
       console.log(err);
       res.json({ "error": "Error getting novel text" });
     } else {
-      res.set({"Content-Disposition":"attachment; filename=" + sanitize(title) + ".txt"});
+      let filename = truncateString(sanitize(title), 50);
+      filename.replace(/\s/g, '_');
+      // replace all commas with underscores
+      filename = filename.replace(/,/g, '_');
+      // replace all dashes with underscores
+      filename = filename.replace(/-/g, '_');
+      // replace all periods with underscores
+      filename = filename.replace(/\./g, '_');
+      filename += '.txt';
+      res.set({"Content-Disposition":"attachment; filename=" + filename});
       res.set({"Content-Type":"text/plain"});
       res.send(results[0][0]['translated']);
+    }
+  });
+});
+
+router.get('/view-novel-text', (req, res) => {
+  const { id } = req.query;
+  conn.execute(`CALL get_novel_text(?)`, [id], (err, results, fields) => {
+    if (err) {
+      console.log(err);
+      res.json({ "error": "Error getting novel text" });
+    } else {
+      res.json({ "text": results[0][0]['translated'] });
     }
   });
 });
@@ -254,7 +282,9 @@ router.post('/download-novel', async (req, res) => {
     });
     translateLong(chunks, (translated) => {
       console.log('done!')
-      translated += '\n';
+      if (translated[translated.length - 1] != '\n') {
+        translated += '\n';
+      }
       // res.json({ "success": "Novel translated", "translated": translated });
       // CREATE PROCEDURE append_to_translated(
       //   _id INT,
@@ -264,7 +294,7 @@ router.post('/download-novel', async (req, res) => {
       // END//
       conn.execute(`CALL append_to_translated(?, ?, ?)`, [id, translated, curChap + 1], (err, results, fields) => {
         if (err) {
-          console.log(err);
+        console.log(err);
           res.json({
             "error": "Error adding novel"
           });

@@ -2,7 +2,7 @@ import fetch from 'node-fetch';
 import JSSoup from 'jssoup';
 import htmlToFormattedText from "html-to-formatted-text";
 
-fetch('https://novel18.syosetu.com/n5538gb/1/', {
+fetch('https://novel18.syosetu.com/n9096gd/1/', {
   "headers": {
     "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
     "accept-language": "en,ja;q=0.9",

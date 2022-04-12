@@ -14,9 +14,12 @@ export default {
   data () {
     return {
       addNovelOpen: false,
+      viewNovelOpen: false,
       link: '',
       novels: [],
-      downloading: false
+      downloading: false,
+      novelIdBeingDownloaded: null,
+      lines: []
     }
   },
   methods: {
@@ -63,6 +66,7 @@ export default {
         return
       }
       this.downloading = true
+      this.novelIdBeingDownloaded = novel.id
       fetch('http://localhost:3124/api/download-novel', {
         method: 'POST',
         headers: {
@@ -81,23 +85,42 @@ export default {
           novel.downloaded_chaps += 1
         }
         this.downloading = false
-        if (length < 600000) {
-          this.downloadNovel(novel, length + res.length)
+        let chunkLength = 600000;
+        length += res.length;
+        let progress = length / chunkLength * 100;
+        console.log(progress)
+        this.$refs.progressbar.style.width = progress + '%'
+        if (length < chunkLength && novel.downloaded_chaps < novel.total_chaps) {
+          this.downloadNovel(novel, length)
         } else {
           notify(novel.title + ' has been downloaded')
+          this.$refs.progressbar.style.width = 0;
         }
       })
     },
     loadNovels() {
       let limit = this.$refs.rows.clientHeight / 35;
       limit = Math.floor(limit);
-      fetch('http://localhost:3124/api/get-novels?limit=' + limit)
+      // fetch('http://localhost:3124/api/get-novels?limit=' + limit)
+      fetch('http://localhost:3124/api/get-novels?limit=' + 100000)
       .then(res => res.json())
       .then(res => {
         console.log(res)
         this.novels = res;
       })
     },
+    viewNovel(novel) {
+      this.viewNovelOpen = true
+      fetch('http://localhost:3124/api/view-novel-text?id=' + novel.id)
+      .then(res => res.json())
+      .then(res => {
+        this.lines = res.text.split('\n')
+      })
+    },
+    closeNovelView() {
+      this.lines = []
+      this.viewNovelOpen = false
+    }
   },
   mounted () {
     // let html = this.$refs.rows.innerHTML;
@@ -109,6 +132,12 @@ export default {
 </script>
 
 <template>
+<div class="view-novel-dialog" v-if="viewNovelOpen">
+  <span class="material-icons-outlined close" @click="closeNovelView">close</span>
+  <div class="text">
+    <p v-for="line in lines">{{line}}</p>
+  </div>
+</div>
 <div class="add-novel-dialog dialog" v-if="addNovelOpen">
   <div class="window">
     <div class="title"><b>Add Novel</b></div>
@@ -125,6 +154,7 @@ export default {
     </div>
   </div>
 </div>
+<div class="progressbar" ref="progressbar"></div>
 <div class="navbar">
   <!-- <button>Translated</button> -->
   <button @click="openAddNovel">Add Novel</button>
@@ -146,7 +176,7 @@ export default {
       <span class="download">12/34<span class="material-icons filled">download</span></span>
     </div>
   </div> -->
-  <div class="row" v-for="novel in novels">
+  <div class="row" v-for="novel in novels" :class="{'downloading-row': downloading && novel.id == novelIdBeingDownloaded}">
       <div class="left">
         <a :href="`http://localhost:3124/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link">
           <span class="material-icons">open_in_new</span>
@@ -156,7 +186,7 @@ export default {
         </a>
       </div>
       <span>{{ novel.date_added.substring(0, novel.date_added.indexOf('T')) }}</span>
-      <span style="white-space: pre-wrap; padding-right: 5px;">{{ novel.title }}</span>
+      <span style="white-space: pre-wrap; padding-right: 5px;" @click="viewNovel(novel)" class="novel-title">{{ novel.title }}</span>
       <span
         class="download"
       >{{ novel.downloaded_chaps }}/{{ novel.total_chaps }}
@@ -188,7 +218,7 @@ html, body, #app {
   right: 0;
 }
 .novels {
-  width: 1080px;
+  width: 1130px;
   /* margin: 10px auto; */
   /* background: blue; */
   height: 100%;
@@ -204,7 +234,7 @@ html, body, #app {
   padding-left: 70px;
 }
 .rows {
-  height: calc(100% - 39px);
+  height: calc(100% - 39px - 13px);
   overflow: auto;
 }
 .left {
@@ -289,6 +319,9 @@ h1 {
   display: flex;
   gap: 45px;
 }
+.downloading-row {
+  background: #f2f2f2;
+}
 .multi-select {
   padding: 10px;
   border-radius: 7px;
@@ -329,5 +362,45 @@ a.link {
   user-select: none;
   cursor: default;
   pointer-events: none;
+}
+.progressbar {
+  width: 0;
+  height: 3px;
+  background: black;
+  position: relative;
+  margin-bottom: 10px;
+  transition: width 0.1s ease;
+}
+.view-novel-dialog {
+  height: 100%;
+  width: 100%;
+  background: white;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  overflow: auto;
+}
+.novel-title {
+  cursor: pointer;
+}
+.novel-title:hover {
+  text-decoration: underline;
+}
+.view-novel-dialog .close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  font-size: 32px;
+  cursor: pointer;
+  user-select: none;
+}
+.view-novel-dialog .close:hover {
+  opacity: 0.5;
+}
+.text {
+  font-size: 18px;
+  width: 800px;
+  margin: 0 auto;
 }
 </style>
