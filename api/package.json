@@ -9,7 +9,8 @@
     "html-to-formatted-text": "^2.7.0",
     "jssoup": "^0.0.15",
     "mysql2": "^2.3.3",
-    "node-fetch": "^3.2.3"
+    "node-fetch": "^3.2.3",
+    "sanitize-filename": "^1.6.3"
   },
   "type": "module"
 }

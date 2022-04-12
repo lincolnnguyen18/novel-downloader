@@ -4,15 +4,25 @@ export default {
     return {
       addNovelOpen: false,
       link: '',
-      novels: []
+      novels: [],
+      downloading: false
     }
   },
   methods: {
-    openAddNovel () {
+    openAddNovel() {
       this.addNovelOpen = true
       setTimeout(() => {
         this.$refs.link.select()
       }, 1)
+    },
+    deleteNovel(novel) {
+      if (confirm("Are you sure you want to delete this novel?")) {
+        fetch('http://localhost:3124/api/delete-novel?id=' + novel.id, {
+          method: 'POST'
+        }).then(() => {
+          this.novels = this.novels.filter(n => n.id !== novel.id)
+        })
+      }
     },
     addNovel() {
       fetch('http://localhost:3124/api/add-novel', {
@@ -31,6 +41,31 @@ export default {
       })
       this.link = ''
       this.addNovelOpen = false
+    },
+    downloadNovel(novel, length) {
+      this.downloading = true
+      fetch('http://localhost:3124/api/download-novel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: novel.id,
+          url: novel.url,
+          curChap: novel.downloaded_chaps,
+          lastChap: novel.total_chaps
+        }),
+      }).then(res => res.json())
+      .then(res => {
+        console.log(res)
+        if (novel.downloaded_chaps < novel.total_chaps) {
+          novel.downloaded_chaps += 1
+        }
+        this.downloading = false
+        if (length < 30000) {
+          this.downloadNovel(novel, length + res.length)
+        }
+      })
     },
     loadNovels() {
       let limit = this.$refs.rows.clientHeight / 35;
@@ -61,7 +96,7 @@ export default {
       <span class="multi-select">Custom</span>
     </div>
     <div class="subtitle">Link</div>
-    <input type="text" v-model="link" placeholder="https://ncode.syosetu.com/..." ref="link" />
+    <input type="text" v-model="link" placeholder="https://ncode.syosetu.com/..." ref="link" @keyup.enter="link && addNovel()">
     <div class="buttons">
       <button class="secondary" @click="addNovelOpen = false">Cancel</button>
       <button @click="addNovel">Add</button>
@@ -69,7 +104,7 @@ export default {
   </div>
 </div>
 <div class="navbar">
-  <button>Translated</button>
+  <!-- <button>Translated</button> -->
   <button @click="openAddNovel">Add Novel</button>
 </div>
 <div class="novels">
@@ -91,14 +126,21 @@ export default {
   </div> -->
   <div class="row" v-for="novel in novels">
       <div class="left">
-        <span class="material-icons">open_in_new</span>
+        <a :href="`http://localhost:3124/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link">
+          <span class="material-icons">open_in_new</span>
+        </a>
         <a :href="novel.url" target="_blank" class="link">
           <span class="material-icons-outlined">link</span>
         </a>
       </div>
       <span>{{ novel.date_added.substring(0, novel.date_added.indexOf('T')) }}</span>
       <span style="white-space: pre-wrap; padding-right: 5px;">{{ novel.title }}</span>
-      <span class="download">{{ novel.downloaded_chaps }}/{{ novel.total_chaps }}<span class="material-icons filled">download</span></span>
+      <span
+        class="download"
+      >{{ novel.downloaded_chaps }}/{{ novel.total_chaps }}
+        <span class="material-icons filled" @click="downloadNovel(novel, 0)" :class="{ 'disabled': downloading }">download</span>
+        <span class="material-icons" @click="deleteNovel(novel)">delete</span>
+      </span>
     </div>
   </div>
 </div>
@@ -174,6 +216,11 @@ button {
 button:hover {
   opacity: 0.5;
 }
+.download {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 button.secondary {
   background: none;
   color: black;
@@ -247,7 +294,17 @@ a.link {
   text-decoration: none;
   align-self: center;
 }
-a.link:hover {
+.row .material-icons {
+  user-select: none;
+  cursor: pointer;
+}
+.row .material-icons:hover, a.link:hover {
   opacity: 0.5;
+}
+.disabled {
+  opacity: 0.1;
+  user-select: none;
+  cursor: default;
+  pointer-events: none;
 }
 </style>
