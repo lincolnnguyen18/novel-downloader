@@ -209,13 +209,14 @@ html, body, #app {
 }
 .navbar {
   /* background: black; */
-  padding: 10px 16px;
+  /* padding: 10px 16px; */
   display: flex;
   flex-direction: column;
   gap: 20px;
   justify-content: flex-end;
   position: fixed;
-  right: 0;
+  top: 24px;
+  right: 16px;
 }
 .novels {
   width: 1130px;
@@ -390,7 +391,7 @@ a.link {
 .view-novel-dialog .close {
   position: fixed;
   top: 16px;
-  right: 16px;
+  right: 200px;
   font-size: 32px;
   cursor: pointer;
   user-select: none;
