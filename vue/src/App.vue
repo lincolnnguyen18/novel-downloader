@@ -4,6 +4,7 @@ export default {
     return {
       addNovelOpen: false,
       link: '',
+      novels: []
     }
   },
   methods: {
@@ -26,6 +27,7 @@ export default {
       .then(res => res.json())
       .then(res => {
         console.log(res)
+        this.loadNovels()
       })
       this.link = ''
       this.addNovelOpen = false
@@ -37,12 +39,13 @@ export default {
       .then(res => res.json())
       .then(res => {
         console.log(res)
+        this.novels = res;
       })
     },
   },
   mounted () {
-    let html = this.$refs.rows.innerHTML;
-    this.$refs.rows.innerHTML = html.repeat(100);
+    // let html = this.$refs.rows.innerHTML;
+    // this.$refs.rows.innerHTML = html.repeat(100);
     this.loadNovels();
   }
 }
@@ -76,7 +79,7 @@ export default {
     <span>Downloaded</span>
   </div>
   <div class="rows" ref="rows">
-    <div class="row">
+    <!-- <div class="row">
       <div class="left">
         <span class="material-icons">open_in_new</span>
         <span class="material-icons-outlined">link</span>
@@ -84,6 +87,18 @@ export default {
       <span>4/3/2022</span>
       <span>Very long novel title</span>
       <span class="download">12/34<span class="material-icons filled">download</span></span>
+    </div>
+  </div> -->
+  <div class="row" v-for="novel in novels">
+      <div class="left">
+        <span class="material-icons">open_in_new</span>
+        <a :href="novel.url" target="_blank" class="link">
+          <span class="material-icons-outlined">link</span>
+        </a>
+      </div>
+      <span>{{ novel.date_added.substring(0, novel.date_added.indexOf('T')) }}</span>
+      <span style="white-space: pre-wrap; padding-right: 5px;">{{ novel.title }}</span>
+      <span class="download">{{ novel.downloaded_chaps }}/{{ novel.total_chaps }}<span class="material-icons filled">download</span></span>
     </div>
   </div>
 </div>
@@ -109,7 +124,7 @@ html, body, #app {
   right: 0;
 }
 .novels {
-  width: 80%;
+  width: 1080px;
   /* margin: 10px auto; */
   /* background: blue; */
   height: 100%;
@@ -117,7 +132,7 @@ html, body, #app {
 }
 .header {
   display: grid;
-  grid-template-columns: 230px 1fr 150px;
+  grid-template-columns: 230px 700px 150px;
   font-weight: bold;
   padding: 10px 0;
 }
@@ -134,9 +149,12 @@ html, body, #app {
 }
 .row {
   display: grid;
-  grid-template-columns: 70px 160px 1fr 120px 30px;
+  grid-template-columns: 70px 160px 700px 120px 30px;
   border-bottom: 1px solid #efefef;
   padding: 5px 0;
+}
+.row:last-child {
+  border-bottom: none;
 }
 .row span {
   display: flex;
@@ -223,5 +241,13 @@ input[type="text"] {
   font-size: 16px;
   color: #333;
   box-sizing: border-box;
+}
+a.link {
+  color: black;
+  text-decoration: none;
+  align-self: center;
+}
+a.link:hover {
+  opacity: 0.5;
 }
 </style>

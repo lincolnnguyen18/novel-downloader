@@ -13,6 +13,27 @@ const conn = mysql.createConnection({
   multipleStatements: true
 });
 
+const translate = async (text) => {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=` + encodeURIComponent(text);
+  const res = await fetch(url);
+  const json = await res.json();
+  // console.log(json);
+  let pieces = json[0];
+  let translated = [];
+  let original = '';
+  let result = '';
+  for (let i = 0; i < pieces.length; i++) {
+    translated.push(pieces[i][0].trim());
+    original += pieces[i][1].trim();
+    if (pieces[i][0].includes('\n') && original.trim().length > 0 || i == pieces.length - 1 && original.trim().length > 0) {
+      result += `${original}\n${translated.join(' ')}\n`;
+      translated = [];
+      original = '';
+    }
+  }
+  return result.trim();
+}
+
 const ping = () => {
   conn.query('SELECT 1');
 }
@@ -55,7 +76,7 @@ router.post('/add-novel', (req, res) => {
     "method": "GET"
   })
   .then(res => res.text())
-  .then(body => {
+  .then(async body => {
     let soup = new JSSoup.default(body);
     let chapters = soup.find('div', {'id': 'novel_no'});
     if (!chapters) {
@@ -65,6 +86,7 @@ router.post('/add-novel', (req, res) => {
     } else {
       let numChapters = chapters.getText().split('/')[1];
       let title = soup.find('a', {'class': 'margin_l10r20'}).getText().trim();
+      let translatedTitle = await translate(title);
       soup.find('div', {'class': 'novel_bn'}).replaceWith('');
       soup.find('div', {'class': 'novel_bn'}).replaceWith('');
       let toTranslate = soup.find('div', {'id': 'novel_color'}).prettify();
@@ -72,7 +94,7 @@ router.post('/add-novel', (req, res) => {
       toTranslate = toTranslate.replace(/^\s*[\r\n]/gm, '');
       // console.log(toTranslate);
       console.log('success')
-      conn.execute(`CALL add_novel(?, ?, ?, ?)`, [title, numChapters, url, toTranslate], (err, results, fields) => {
+      conn.execute(`CALL add_novel(?, ?, ?, ?)`, [translatedTitle, numChapters, url, toTranslate], (err, results, fields) => {
         if (err) {
           console.log(err);
           res.json({

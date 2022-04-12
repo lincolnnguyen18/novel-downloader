@@ -50,11 +50,11 @@ CREATE PROCEDURE get_novel_text(
 END//
 
 CREATE PROCEDURE get_novels_init(_limit INT) BEGIN
-  SELECT id, title, downloaded_chaps, total_chaps, url FROM novel ORDER BY id DESC LIMIT _limit;
+  SELECT id, title, downloaded_chaps, total_chaps, url, date_added FROM novel ORDER BY id DESC LIMIT _limit;
 END//
 
 CREATE PROCEDURE get_novels(_continue_id INT, _limit INT) BEGIN
-  SELECT id, title, downloaded_chaps, total_chaps, url FROM novel WHERE id < _continue_id ORDER BY id DESC LIMIT _limit;
+  SELECT id, title, downloaded_chaps, total_chaps, url, date_added FROM novel WHERE id < _continue_id ORDER BY id DESC LIMIT _limit;
 END//
 
 DELIMITER ;
