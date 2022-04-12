@@ -1,4 +1,15 @@
 <script>
+let beep = new Audio('/beep.mp3');
+const notify = async (message) => {
+  beep.play();
+  let notification = new Notification("Novel Downloader", {
+    body: message
+  });
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  }
+}
 export default {
   data () {
     return {
@@ -37,12 +48,20 @@ export default {
       .then(res => res.json())
       .then(res => {
         console.log(res)
-        this.loadNovels()
+        if (res.error) {
+          alert(res.error)
+        } else {
+          this.loadNovels()
+        }
       })
       this.link = ''
       this.addNovelOpen = false
     },
     downloadNovel(novel, length) {
+      if (novel.downloaded_chaps == novel.total_chaps) {
+        alert("All chapters are already downloaded")
+        return
+      }
       this.downloading = true
       fetch('http://localhost:3124/api/download-novel', {
         method: 'POST',
@@ -62,8 +81,10 @@ export default {
           novel.downloaded_chaps += 1
         }
         this.downloading = false
-        if (length < 30000) {
+        if (length < 600000) {
           this.downloadNovel(novel, length + res.length)
+        } else {
+          notify(novel.title + ' has been downloaded')
         }
       })
     },
@@ -82,6 +103,7 @@ export default {
     // let html = this.$refs.rows.innerHTML;
     // this.$refs.rows.innerHTML = html.repeat(100);
     this.loadNovels();
+    if (Notification.permission !== "granted") { Notification.requestPermission(); }
   }
 }
 </script>
@@ -217,8 +239,9 @@ button:hover {
   opacity: 0.5;
 }
 .download {
-  display: flex;
-  gap: 8px;
+  display: grid!important;
+  grid-template-columns: 70px 60px 30px;
+  /* gap: 8px; */
   align-items: center;
 }
 button.secondary {

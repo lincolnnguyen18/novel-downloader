@@ -17,6 +17,10 @@ CREATE TABLE novel(
 
 DELIMITER //
 
+CREATE PROCEDURE check_link(_url TEXT) BEGIN
+  SELECT COUNT(*) as url_exists FROM novel WHERE url = _url;
+END //
+
 CREATE PROCEDURE add_novel(_title TEXT, _total_chaps INT, _url TEXT, _translated LONGTEXT) BEGIN
   INSERT INTO novel(title, total_chaps, url, translated) VALUES(_title, _total_chaps, _url, _translated);
 END//
