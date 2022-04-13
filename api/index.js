@@ -19,30 +19,42 @@ const translate = async (text) => {
   const res = await fetch(url);
   const json = await res.json();
   // console.log(json);
+  let lang = json[2];
   let pieces = json[0];
   let translated = [];
-  let original = '';
+  let original = [];
   let result = '';
   for (let i = 0; i < pieces.length; i++) {
-    translated.push(pieces[i][0].trim());
-    original += pieces[i][1].trim();
-    if (pieces[i][0].includes('\n') && original.trim().length > 0 || i == pieces.length - 1 && original.trim().length > 0) {
-      result += `${original}\n${translated.join(' ')}\n`;
-      translated = [];
-      original = '';
-    }
+    translated.push(pieces[i][0]);
+    original.push(pieces[i][1]);
+    // if (lang != 'ja' && lang != 'zh' && lang != 'ko')
+    //   original += ' ';
+    // if (pieces[i][0].includes('\n') && original.trim().length > 0 && original.trim().length > 0 || pieces.length == 1) {
+    //   result += `${original}\n${translated.join(' ')}\n`;
+    //   translated = [];
+    //   original = '';
+    // } else if (i == pieces.length - 1) {
+    //   return 
+    // }
   }
-  return result;
+  return { original, translated, lang };
 }
 
 const timer = ms => new Promise(res => setTimeout(res, ms))
 
 const translateLong = async (chunks, callback) => {
-  let translated = '';
+  let original = [];
+  let translated = [];
+  let lang = null;
   for (let i = 0; i < chunks.length; i++) {
     let chunk = chunks[i];
     await translate(chunk).then(res => {
-      translated += res;
+      if (lang != 'ja' && lang != 'zh' && lang != 'ko')
+        original.push(res.original.join(' '));
+      else
+      original.push(res.original.join(''));
+      translated.push(res.translated.join(' '));
+      lang = res.lang;
     });
     let min = 100;
     let max = 500;
@@ -50,23 +62,37 @@ const translateLong = async (chunks, callback) => {
     console.log(`Progress: ${(i + 1) / chunks.length * 100}%`);
     await timer(time);
   }
-  callback(translated);
+  callback({ original, translated, lang });
 }
 
 const splitText = (data) => {
   // split based on 。 and \n
   let chunks = [];
   let chunk = '';
+  let stopChars = ['\n', '「', '"', '»', '«', '」', '。', '.', ','];
   for (let i = 0; i < data.length; i++) {
     chunk += data[i];
-    if (chunk.length > 600 && (data[i] === '\n' || data[i] === '「' || data[i] === '」' || data[i] === '。')) {
+    if ((chunk.length > 600 && (stopChars.includes(data[i])) || i == (data.length - 1))) {
       chunks.push(chunk);
       chunk = '';
     } else if (chunk.length > 700) {
+      // find index of first stopChar in reverse
+      for (let j = i; j > i; j--) {
+        if (stopChars.includes(data[j])) {
+          chunks.push(chunk.substring(i, j));
+          chunk = '';
+          break;
+        }
+      }
+      for (let j = i; j > i; j--) {
+        if (data[j] == ' ') {
+          chunks.push(chunk.substring(i, j));
+          chunk = '';
+          break;
+        }
+      }
       chunks.push(chunk);
       chunk = '';
-    } else if (i === data.length - 1) {
-      chunks.push(chunk);
     }
   }
   return chunks;
@@ -108,6 +134,9 @@ const getChapterText = async (urlWithoutSlashes, chapNum) => {
         let reading = e.find('rt').text;
         e.replaceWith(`${word}(${reading})`);
       });
+      soup.findAll('script').forEach(e => {
+        e.replaceWith('');
+      });
       soup.findAll('p').forEach(e => {
         // remove all newlines
         e.replaceWith(e.text.replace(/\n/g, ''));
@@ -129,9 +158,9 @@ setInterval(() => {
 }, 60000);
 
 const app = express();
-app.use(express.json());
+app.use(express.json({limit: '2gb'}));
 app.use(cors());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '2gb' }));
 app.use(express.static('../vue/dist'));
 
 app.get('/', (req, res) => {
@@ -197,8 +226,10 @@ router.post('/add-novel', (req, res) => {
             });
           } else {
             let numChapters = chapters.getText().split('/')[1];
-            let title = soup.find('a', {'class': 'margin_l10r20'}).getText().trim();
-            let translatedTitle = await translate(title);
+            let title = soup.find('a', {'class': 'margin_l10r20'});
+            if (!title) title = soup.find('a', {'class': 'margin_r20'});
+            title = title.getText().trim();
+            let { original, translated, lang } = await translate(title);
             soup.find('div', {'class': 'novel_bn'}).replaceWith('');
             soup.find('div', {'class': 'novel_bn'}).replaceWith('');
             // let toTranslate = soup.find('div', {'id': 'novel_color'}).prettify();
@@ -207,8 +238,8 @@ router.post('/add-novel', (req, res) => {
             // toTranslate = toTranslate.replace(/\s*\n\s*\(\s*\n\s*/g, '(');
             // toTranslate = toTranslate.replace(/\s*\n\s*\)\s*\n\s*/g, ')');
             console.log('success')
-            let textToAppend = `${urlWithoutSlashes}\n${translatedTitle}\n`;
-            conn.execute(`CALL add_novel(?, ?, ?, ?)`, [translatedTitle, numChapters, urlWithoutSlashes, textToAppend], (err, results, fields) => {
+            let textToAppend = `${urlWithoutSlashes}\n${original}\n${translated}\n`;
+            conn.execute(`CALL add_novel(?, ?, ?, ?)`, [`${original}\n${translated}`, numChapters, urlWithoutSlashes, textToAppend], (err, results, fields) => {
               if (err) {
                 console.log(err);
                 res.json({
@@ -221,8 +252,36 @@ router.post('/add-novel', (req, res) => {
               }
             });
           }
+        })
+        .catch(err => {
+          console.log(err);
+          res.json({
+            "error": "Error fetching novel"
+          });
         });
       }
+    }
+  });
+});
+
+// CREATE PROCEDURE add_custom_novel(_title TEXT, _text LONGTEXT, _total_chaps INT, _translated LONGTEXT) BEGIN
+//   INSERT INTO novel(title, toTranslate, total_chaps, translated, url) VALUES(_title, _text, _total_chaps, _translated, "");
+// END//
+
+router.post('/add-custom-novel', async (req, res) => {
+  let { title, text } = req.body;
+  // remove empty lines from text
+  text = text.replace(/^\s*[\r\n]/gm, '');
+  let { original, translated } = await translate(title);
+  let totalChaps = Math.floor(text.length / 7000);
+  if (totalChaps == 0) totalChaps = 1;
+  // console.log(translatedTitle, totalChaps);
+  conn.execute(`CALL add_custom_novel(?, ?, ?, ?)`, [`${original}\n${translated}`, text, totalChaps, `${original}\n${translated}\n`], (err, results, fields) => {
+    if (err) {
+      console.log(err);
+      res.json({ "error": "Error adding novel" });
+    } else {
+      res.json({ "success": "Novel added" });
     }
   });
 });
@@ -270,49 +329,125 @@ router.get('/view-novel-text', (req, res) => {
   });
 });
 
+const joinLines = (original, translated) => {
+  original = original.join('').split('\n');
+  original = original.map(line => line.replace(/^\s+/, ''));
+  // console.log(original);
+  translated = translated.join('').split('\n');
+  translated = translated.map(line => line.replace(/^\s+/, ''));
+  // console.log(translated);
+  let combined = "";
+  for (let i = 0; i < original.length; i++) {
+    combined += original[i] + '\n' + translated[i] + '\n';
+  }
+  return combined;
+}
+
 router.post('/download-novel', async (req, res) => {
   const { id, url, curChap, lastChap } = req.body;
-  console.log(id, url, curChap, lastChap);
-  let toTranslate = await getChapterText(url, curChap + 1);
-  if (toTranslate) {
-    let chunks = splitText(toTranslate);
-    chunks.forEach(chunk => {
-      // console.log(chunk);
-      // console.log('----------------');
-    });
-    translateLong(chunks, (translated) => {
-      console.log('done!')
-      if (translated[translated.length - 1] != '\n') {
-        translated += '\n';
-      }
-      // res.json({ "success": "Novel translated", "translated": translated });
-      // CREATE PROCEDURE append_to_translated(
-      //   _id INT,
-      //   _new_translated LONGTEXT
-      // ) BEGIN
-      //   UPDATE novel SET translated = CONCAT(translated, _new_translated) WHERE id = _id;
-      // END//
-      conn.execute(`CALL append_to_translated(?, ?, ?)`, [id, translated, curChap + 1], (err, results, fields) => {
-        if (err) {
-        console.log(err);
-          res.json({
-            "error": "Error adding novel"
-          });
-        } else {
-          res.json({
-            "success": "Novel added",
-            "length": translated.length
-          });
-        }
+  if (url) {
+    console.log(id, url, curChap, lastChap);
+    let toTranslate = await getChapterText(url, curChap + 1);
+    if (toTranslate) {
+      let chunks = splitText(toTranslate);
+      // chunks.forEach(chunk => {
+      //   console.log(chunk);
+      //   console.log('----------------');
+      // });
+      translateLong(chunks, (data) => {
+        let { original, translated, lang } = data;
+        let combined = joinLines(original, translated);
+        console.log('done!')
+        // if (translated[translated.length - 1] != '\n') {
+        //   translated += '\n';
+        // }
+        conn.execute(`CALL append_to_translated(?, ?, ?)`, [id, combined, curChap + 1], (err, results, fields) => {
+          if (err) {
+          console.log(err);
+            res.json({
+              "error": "Error translating novel"
+            });
+          } else {
+            res.json({
+              "success": "Novel translated",
+              "length": combined.length
+            });
+          }
+        });
       });
-    });
+    } else {
+      res.json({ "error": "Error downloading novel" });
+    }
   } else {
-    res.json({ "error": "Error downloading novel" });
+    conn.execute(`CALL get_to_translate(?)`, [id], (err, results, fields) => {
+      if (err) {
+        console.log(err);
+        res.json({ "error": "Error getting text to translate" });
+      } else {
+        let toTranslate = results[0][0]['toTranslate'];
+        // console.log(`toTranslate: ${toTranslate}`);
+        let translatedLength = results[0][0]['translated_length'];
+        let initToTranslateLength = results[0][0]['initToTranslateLength'];
+        let toTranslatedTranslatedLength = results[0][0]['toTranslatedTranslatedLength'];
+        let chunks = splitText(toTranslate);
+        let chunksToTranslate = [];
+        let chunksLeft = [];
+        let totalChars = 0;
+        let i;
+        for (i = 0 ; i < chunks.length; i++) {
+          let chunk = chunks[i];
+          chunksToTranslate.push(chunk);
+          totalChars += chunk.length;
+          // console.log(chunk);
+          // console.log('----------------');
+          if (totalChars > 7000) {
+            break;
+          }
+        };
+        // console.log(`first i: ${i}`);
+        let chunksToTranslateLength = chunksToTranslate.join('').length;
+        // console.log(chunksToTranslate.join('').slice(-30));
+        // console.log(`second i: ${i}`);
+        i += 1;
+        for (i = i; i < chunks.length; i++) {
+          let chunk = chunks[i];
+          chunksLeft.push(chunk);
+        }
+        let textToTranslateLeft = chunksLeft.join('');
+        // console.log(textToTranslateLeft.substring(0, 30));
+        translateLong(chunksToTranslate, (data) => {
+          let { original, translated, lang } = data;
+          // console.log(original);
+          let combined = joinLines(original, translated);
+          console.log('done!')
+          // if (translated[translated.length - 1] != '\n') {
+          //   translated += '\n';
+          // }
+          let curChap = Math.floor(((chunksToTranslateLength + toTranslatedTranslatedLength) / initToTranslateLength) * lastChap);
+          console.log(`curChap: ${curChap}`);
+          if (!textToTranslateLeft) curChap = lastChap;
+          conn.execute(`CALL append_to_translated(?, ?, ?)`, [id, combined, curChap], (err, results, fields) => {
+            if (err) {
+            console.log(err);
+              res.json({ "error": "Error translating text" });
+            } else {
+              res.json({
+                "success": "Novel added",
+                "length": combined.length,
+                "curChap": curChap
+              });
+            }
+          });
+          conn.execute('CALL set_to_translate(?, ?, ?)', [id, textToTranslateLeft, combined.length], (err, results, fields) => { });
+        });
+      }
+    });
   }
 });
 
 router.get('/get-novels', (req, res) => {
-  const { continue_id, limit, search } = req.query;
+  let { continue_id, limit, search } = req.query;
+  if (!search) search = '';
   // console.log(continue_id, limit);
   if (continue_id) {
     conn.execute(`CALL get_novels(?, ?, ?)`, [continue_id, limit, search], (err, results, fields) => {

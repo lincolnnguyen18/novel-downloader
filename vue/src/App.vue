@@ -10,20 +10,54 @@ const notify = async (message) => {
     notification.close();
   }
 }
+const getCookie = (key) => {
+  let cookie = document.cookie.split('; ')
+  for (let i = 0; i < cookie.length; i++) {
+    let arr = cookie[i].split('=')
+    if (arr[0] === key) {
+      return arr[1]
+    }
+  }
+  return ''
+}
+const setCookie = (key, value) => {
+  document.cookie = `${key}=${value}`
+}
 export default {
   data () {
     return {
       addNovelOpen: false,
       viewNovelOpen: false,
+      currentNovel: null,
       link: '',
       novels: [],
       downloading: false,
       novelIdBeingDownloaded: null,
       lines: [],
-      search: ""
+      search: "",
+      addNovelMode: "url",
+      title: "",
+      text: "",
     }
   },
   methods: {
+    closeAddNovel () {
+      this.link = ''
+      this.title = ''
+      this.text = ''
+      this.addNovelMode = "url"
+      this.addNovelOpen = false;
+    },
+    setAddNovelMode: function (mode) {
+      this.addNovelMode = mode;
+      setTimeout(() => {
+        if (mode == 'url') {
+        this.$refs.link.select()
+      } else {
+        this.$refs.title.select()
+      }
+      }, 1);
+    },
     searchNovels (search) {
       this.novels = this.novels.filter(novel => novel.name.toLowerCase().includes(search.toLowerCase()));
     },
@@ -49,26 +83,47 @@ export default {
       }
     },
     addNovel() {
-      fetch('http://localhost:6001/api/add-novel', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: this.link,
-        }),
-      })
-      .then(res => res.json())
-      .then(res => {
-        console.log(res)
-        if (res.error) {
-          alert(res.error)
-        } else {
-          this.loadNovels()
-        }
-      })
-      this.link = ''
-      this.addNovelOpen = false
+      if (this.addNovelMode == 'url') {
+        fetch('http://localhost:6001/api/add-novel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: this.link,
+          }),
+        })
+        .then(res => res.json())
+        .then(res => {
+          console.log(res)
+          if (res.error) {
+            alert(res.error)
+          } else {
+            this.loadNovels()
+          }
+        })
+      } else {
+        fetch('http://localhost:6001/api/add-custom-novel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: this.title,
+            text: this.text,
+          }),
+        })
+        .then(res => res.json())
+        .then(res => {
+          console.log(res)
+          if (res.error) {
+            alert(res.error)
+          } else {
+            this.loadNovels()
+          }
+        })
+      }
+      this.closeAddNovel()
     },
     downloadNovel(novel, length) {
       if (novel.downloaded_chaps == novel.total_chaps) {
@@ -91,11 +146,14 @@ export default {
       }).then(res => res.json())
       .then(res => {
         console.log(res)
-        if (novel.downloaded_chaps < novel.total_chaps) {
+        if (novel.downloaded_chaps < novel.total_chaps && novel.url) {
           novel.downloaded_chaps += 1
+        } else {
+          novel.downloaded_chaps = res.curChap;
         }
         this.downloading = false
-        let chunkLength = 600000;
+        // let chunkLength = 600000;
+        let chunkLength = 60000;
         length += res.length;
         let progress = length / chunkLength * 100;
         console.log(progress)
@@ -136,13 +194,31 @@ export default {
     },
     viewNovel(novel) {
       this.viewNovelOpen = true
+      this.currentNovel = novel
       fetch('http://localhost:6001/api/view-novel-text?id=' + novel.id)
       .then(res => res.json())
       .then(res => {
         this.lines = res.text.split('\n')
       })
+      .then(() => {
+        let scrollTop = getCookie(`${novel.id}`)
+        console.log(`scrollTop: ${scrollTop}`)
+        if (scrollTop) {
+          this.$refs.text.scrollTo(0, scrollTop)
+        }
+        // setTimeout(() => {
+        //   if (scrollTop) {
+        //     this.$refs.text.scrollTo(0, scrollTop)
+        //   }
+        //   console.log('scrolled!')
+        // }, 3000)
+      })
     },
     closeNovelView() {
+      // get current scroll position
+      let scrollTop = this.$refs.text.scrollTop;
+      setCookie(this.currentNovel.id, scrollTop);
+      console.log(scrollTop)
       this.lines = []
       this.viewNovelOpen = false
     }
@@ -157,7 +233,7 @@ export default {
 </script>
 
 <template>
-<div class="view-novel-dialog" v-if="viewNovelOpen">
+<div class="view-novel-dialog" v-if="viewNovelOpen" ref="text">
   <span class="material-icons-outlined close" @click="closeNovelView">close</span>
   <div class="text">
     <p v-for="line in lines">{{line}}</p>
@@ -165,16 +241,28 @@ export default {
 </div>
 <div class="add-novel-dialog dialog" v-if="addNovelOpen">
   <div class="window">
-    <div class="title"><b>Add Novel</b></div>
-    <div class="subtitle">Type</div>
-    <div class="multi-select-wrapper">
-      <span class="multi-select selected">Syosetu</span>
-      <span class="multi-select">Custom</span>
+    <div class="top">
+      <div class="title"><b>Add Novel</b></div>
+      <div class="subtitle">Type</div>
+      <div class="multi-select-wrapper">
+        <span class="multi-select" @click="setAddNovelMode('url')" :class="{selected: addNovelMode == 'url'}">Syosetu</span>
+        <span class="multi-select" @click="setAddNovelMode('custom')" :class="{selected: addNovelMode == 'custom'}">Custom</span>
+      </div>
+      <div v-if="addNovelMode == 'url'">
+        <div class="subtitle">Link</div>
+        <input type="text" v-model="link" placeholder="Enter syosetu link here..." ref="link" @keyup.enter="link && addNovel()">
+      </div>
+      <div v-if="addNovelMode == 'custom'">
+        <div class="subtitle">Title</div>
+        <input type="text" v-model="title" placeholder="Enter title here..." ref="title">
+      </div>
+      <div v-if="addNovelMode == 'custom'">
+        <div class="subtitle">Text</div>
+        <textarea v-model="text" placeholder="Enter text here..." @keyup.enter="title && text && addNovel()"></textarea>
+      </div>
     </div>
-    <div class="subtitle">Link</div>
-    <input type="text" v-model="link" placeholder="https://ncode.syosetu.com/..." ref="link" @keyup.enter="link && addNovel()">
     <div class="buttons">
-      <button class="secondary" @click="addNovelOpen = false">Cancel</button>
+      <button class="secondary" @click="closeAddNovel">Cancel</button>
       <button @click="addNovel">Add</button>
     </div>
   </div>
@@ -206,7 +294,7 @@ export default {
         <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link">
           <span class="material-icons">open_in_new</span>
         </a>
-        <a :href="novel.url" target="_blank" class="link">
+        <a :href="novel.url" target="_blank" class="link" v-if="novel.url">
           <span class="material-icons-outlined">link</span>
         </a>
       </div>
@@ -231,9 +319,10 @@ html, body, #app {
   padding: 0;
   height: 100%;
   overflow-y: hidden;
+  /* overscroll-behavior-y: none; */
 }
 .novels {
-  width: 1130px;
+  width: 1160px;
   /* margin: 10px auto; */
   /* background: blue; */
   height: 100%;
@@ -241,12 +330,12 @@ html, body, #app {
 }
 .header {
   display: grid;
-  grid-template-columns: 230px 700px 150px;
+  grid-template-columns: 260px 700px 150px;
   font-weight: bold;
   padding: 10px 0;
 }
 .header .first {
-  padding-left: 70px;
+  padding-left: 100px;
 }
 .rows {
   height: calc(100% - 39px - 13px - 37px);
@@ -254,11 +343,11 @@ html, body, #app {
 }
 .left {
   display: flex;
-  gap: 8px;
+  gap: 22px;
 }
 .row {
   display: grid;
-  grid-template-columns: 70px 160px 700px 120px 30px;
+  grid-template-columns: 100px 160px 700px 120px 30px;
   border-bottom: 1px solid #efefef;
   padding: 5px 0;
 }
@@ -314,6 +403,10 @@ h1 {
   background: white;
   padding: 16px;
   border-radius: 7px;
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 .window .title {
   font-size: 24px;
@@ -328,11 +421,12 @@ h1 {
   margin-top: 28px;
   display: flex;
   gap: 20px;
+  align-self: flex-end;
   justify-content: flex-end;
 }
 .multi-select-wrapper {
   display: flex;
-  gap: 45px;
+  gap: 16px;
 }
 .downloading-row {
   background: #f2f2f2;
@@ -345,12 +439,15 @@ h1 {
   background: white;
   color: black;
 }
+.multi-select:hover {
+  background: #f2f2f2;
+}
 .multi-select.selected {
   background: black;
   color: white;
   font-weight: bold;
 }
-input[type="text"] {
+input[type="text"], textarea {
   border: none;
   background: #EFEFEF;
   border-radius: 7px;
@@ -359,6 +456,8 @@ input[type="text"] {
   font-size: 16px;
   color: #333;
   box-sizing: border-box;
+  font-family: 'Roboto', sans-serif;
+  resize: none;
 }
 a.link {
   color: black;
@@ -424,5 +523,8 @@ a.link {
   display: flex;
   justify-content: center;
   gap: 16px;
+}
+.material-icons-outlined {
+  user-select: none;
 }
 </style>
