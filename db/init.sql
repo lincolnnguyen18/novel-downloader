@@ -51,12 +51,14 @@ CREATE PROCEDURE get_novel_text(
   SELECT translated FROM novel WHERE id = _id;
 END//
 
-CREATE PROCEDURE get_novels_init(_limit INT) BEGIN
-  SELECT id, title, downloaded_chaps, total_chaps, url, date_added FROM novel ORDER BY id DESC LIMIT _limit;
+CREATE PROCEDURE get_novels_init(_limit INT, _search TEXT) BEGIN
+  -- SELECT id, title, downloaded_chaps, total_chaps, url, date_added FROM novel ORDER BY id DESC LIMIT _limit;
+  SELECT id, title, downloaded_chaps, total_chaps, url, date_added FROM novel WHERE title LIKE '%_search%' ORDER BY id DESC LIMIT _limit;
 END//
 
-CREATE PROCEDURE get_novels(_continue_id INT, _limit INT) BEGIN
-  SELECT id, title, downloaded_chaps, total_chaps, url, date_added FROM novel WHERE id < _continue_id ORDER BY id DESC LIMIT _limit;
+CREATE PROCEDURE get_novels(_continue_id INT, _limit INT, _search TEXT) BEGIN
+  -- SELECT id, title, downloaded_chaps, total_chaps, url, date_added FROM novel WHERE id < _continue_id ORDER BY id DESC LIMIT _limit;
+  SELECT id, title, downloaded_chaps, total_chaps, url, date_added FROM novel WHERE id < _continue_id AND title LIKE '%_search%' ORDER BY id DESC LIMIT _limit;
 END//
 
 DELIMITER ;

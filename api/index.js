@@ -312,10 +312,10 @@ router.post('/download-novel', async (req, res) => {
 });
 
 router.get('/get-novels', (req, res) => {
-  const { continue_id, limit } = req.query;
+  const { continue_id, limit, search } = req.query;
   // console.log(continue_id, limit);
   if (continue_id) {
-    conn.execute(`CALL get_novels(?, ?)`, [continue_id, limit], (err, results, fields) => {
+    conn.execute(`CALL get_novels(?, ?, ?)`, [continue_id, limit, search], (err, results, fields) => {
       if (err) {
         console.log(err);
         res.json({
@@ -326,7 +326,7 @@ router.get('/get-novels', (req, res) => {
       }
     });
   } else {
-    conn.execute(`CALL get_novels_init(?)`, [limit], (err, results, fields) => {
+    conn.execute(`CALL get_novels_init(?, ?)`, [limit, search], (err, results, fields) => {
       if (err) {
         console.log(err);
         res.json({
@@ -340,5 +340,5 @@ router.get('/get-novels', (req, res) => {
 });
 
 app.use('/api', router);
-const port = 3124;
+const port = 6001;
 app.listen(port, () => console.log(`Listening on port ${port}`));

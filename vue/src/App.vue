@@ -19,10 +19,20 @@ export default {
       novels: [],
       downloading: false,
       novelIdBeingDownloaded: null,
-      lines: []
+      lines: [],
+      search: ""
     }
   },
   methods: {
+    searchNovels (search) {
+      this.novels = this.novels.filter(novel => novel.name.toLowerCase().includes(search.toLowerCase()));
+    },
+    onScroll ({ target: { scrollTop, clientHeight, scrollHeight }}) {
+      if (scrollTop + clientHeight >= scrollHeight) {
+        console.log('scrolled to bottom')
+        this.loadMoreNovels()
+      }
+    },
     openAddNovel() {
       this.addNovelOpen = true
       setTimeout(() => {
@@ -31,7 +41,7 @@ export default {
     },
     deleteNovel(novel) {
       if (confirm("Are you sure you want to delete this novel?")) {
-        fetch('http://localhost:3124/api/delete-novel?id=' + novel.id, {
+        fetch('http://localhost:6001/api/delete-novel?id=' + novel.id, {
           method: 'POST'
         }).then(() => {
           this.novels = this.novels.filter(n => n.id !== novel.id)
@@ -39,7 +49,7 @@ export default {
       }
     },
     addNovel() {
-      fetch('http://localhost:3124/api/add-novel', {
+      fetch('http://localhost:6001/api/add-novel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +77,7 @@ export default {
       }
       this.downloading = true
       this.novelIdBeingDownloaded = novel.id
-      fetch('http://localhost:3124/api/download-novel', {
+      fetch('http://localhost:6001/api/download-novel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,18 +110,33 @@ export default {
     },
     loadNovels() {
       let limit = this.$refs.rows.clientHeight / 35;
-      limit = Math.floor(limit);
-      // fetch('http://localhost:3124/api/get-novels?limit=' + limit)
-      fetch('http://localhost:3124/api/get-novels?limit=' + 100000)
+      limit = Math.floor(limit*1.5);
+      console.log(`limit: ${limit}`)
+      fetch(`http://localhost:6001/api/get-novels?limit=${limit}&search=${this.search.trim()}`)
       .then(res => res.json())
       .then(res => {
         console.log(res)
         this.novels = res;
+        setTimeout(() => {
+          // scroll to top
+          this.$refs.rows.scrollTop = 0;
+        }, 1)
+      })
+    },
+    loadMoreNovels() {
+      let limit = this.$refs.rows.clientHeight / 35;
+      limit = Math.floor(limit*1.5);
+      console.log(`limit: ${limit}`)
+      fetch(`http://localhost:6001/api/get-novels?limit=${limit}&continue_id=${this.novels[this.novels.length - 1].id}&search=${this.search.trim()}`)
+      .then(res => res.json())
+      .then(res => {
+        console.log(res)
+        this.novels = this.novels.concat(res);
       })
     },
     viewNovel(novel) {
       this.viewNovelOpen = true
-      fetch('http://localhost:3124/api/view-novel-text?id=' + novel.id)
+      fetch('http://localhost:6001/api/view-novel-text?id=' + novel.id)
       .then(res => res.json())
       .then(res => {
         this.lines = res.text.split('\n')
@@ -155,8 +180,8 @@ export default {
   </div>
 </div>
 <div class="progressbar" ref="progressbar"></div>
-<div class="navbar">
-  <!-- <button>Translated</button> -->
+<div class="search">
+  <input type="text" placeholder="Search..." v-model="search" @keyup.enter="loadNovels()">
   <button @click="openAddNovel">Add Novel</button>
 </div>
 <div class="novels">
@@ -165,7 +190,7 @@ export default {
     <span>Title</span>
     <span>Downloaded</span>
   </div>
-  <div class="rows" ref="rows">
+  <div class="rows" ref="rows" @scroll="onScroll">
     <!-- <div class="row">
       <div class="left">
         <span class="material-icons">open_in_new</span>
@@ -178,7 +203,7 @@ export default {
   </div> -->
   <div class="row" v-for="novel in novels" :class="{'downloading-row': downloading && novel.id == novelIdBeingDownloaded}">
       <div class="left">
-        <a :href="`http://localhost:3124/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link">
+        <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link">
           <span class="material-icons">open_in_new</span>
         </a>
         <a :href="novel.url" target="_blank" class="link">
@@ -205,18 +230,7 @@ html, body, #app {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden;
-}
-.navbar {
-  /* background: black; */
-  /* padding: 10px 16px; */
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  justify-content: flex-end;
-  position: fixed;
-  top: 24px;
-  right: 16px;
+  overflow-y: hidden;
 }
 .novels {
   width: 1130px;
@@ -235,7 +249,7 @@ html, body, #app {
   padding-left: 70px;
 }
 .rows {
-  height: calc(100% - 39px - 13px);
+  height: calc(100% - 39px - 13px - 37px);
   overflow: auto;
 }
 .left {
@@ -391,7 +405,7 @@ a.link {
 .view-novel-dialog .close {
   position: fixed;
   top: 16px;
-  right: 200px;
+  right: 32px;
   font-size: 32px;
   cursor: pointer;
   user-select: none;
@@ -401,7 +415,14 @@ a.link {
 }
 .text {
   font-size: 18px;
-  width: 800px;
+  width: 95%;
+  max-width: 800px;
   margin: 0 auto;
+  word-break: break-word;
+}
+.search {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
 }
 </style>

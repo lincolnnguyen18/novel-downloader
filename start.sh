@@ -1,18 +1,15 @@
-if screen -list | grep -q "d1"; then
-  echo "d1 already started"
+if screen -list | grep -q "p1"; then
+  echo "p1 already started"
   exit 1
 else
-  echo "starting d1"
+  echo "starting p1"
 fi
 
-. /media/sda1/deployment/ports.sh
-
 # Start node server
-screen -dmS 'd1'
-screen -S 'd1' -X stuff "cd api && node .\n"
+screen -S p1 -dm bash -c "cd api && node ."
 
-echo "Checking if node started..."
-lsof -i:$d1
+# echo "Checking if node started..."
+# lsof -i:6001
 
 # Build vue client
 # yarn build
