@@ -152,8 +152,8 @@ export default {
           novel.downloaded_chaps = res.curChap;
         }
         this.downloading = false
-        // let chunkLength = 600000;
-        let chunkLength = 60000;
+        let chunkLength = 600000;
+        // let chunkLength = 60000;
         length += res.length;
         let progress = length / chunkLength * 100;
         console.log(progress)
