@@ -28,10 +28,15 @@ CREATE TABLE tag(
 CREATE TABLE novel_tags(
   novel_id INT NOT NULL,
   tag_id INT NOT NULL,
-  FOREIGN KEY (novel_id) REFERENCES novel(id),
+  FOREIGN KEY (novel_id) REFERENCES novel(id)
+    ON DELETE CASCADE,
   FOREIGN KEY (tag_id) REFERENCES tag(id),
   UNIQUE (novel_id, tag_id)
 );
+
+-- alter novel_tags so that FOREIGN KEY (novel_id) REFERENCES novel(id) becomes FOREIGN KEY (novel_id) REFERENCES novel(id) ON DELETE CASCADE
+-- ALTER TABLE novel_tags
+--   ADD CONSTRAINT novel_tags_novel_id_fk FOREIGN KEY (novel_id) REFERENCES novel(id) ON DELETE CASCADE;
 
 DELIMITER //
 
