@@ -1,6 +1,7 @@
 import express from 'express';
 import fetch from 'node-fetch';
 import mysql from 'mysql2';
+import mysql2 from 'mysql2/promise';
 import cors from 'cors';
 import JSSoup from 'jssoup';
 import htmlToFormattedText from "html-to-formatted-text";
@@ -52,7 +53,7 @@ const translateLong = async (chunks, callback) => {
       if (lang != 'ja' && lang != 'zh' && lang != 'ko')
         original.push(res.original.join(' '));
       else
-      original.push(res.original.join(''));
+        original.push(res.original.join(''));
       translated.push(res.translated.join(' '));
       lang = res.lang;
     });
@@ -276,12 +277,23 @@ router.post('/add-custom-novel', async (req, res) => {
   let totalChaps = Math.floor(text.length / 7000);
   if (totalChaps == 0) totalChaps = 1;
   // console.log(translatedTitle, totalChaps);
-  conn.execute(`CALL add_custom_novel(?, ?, ?, ?)`, [`${original}\n${translated}`, text, totalChaps, `${original}\n${translated}\n`], (err, results, fields) => {
+  conn.execute(`CALL check_title(?)`, [`${original}\n${translated}`], (err, results, fields) => {
     if (err) {
       console.log(err);
-      res.json({ "error": "Error adding novel" });
+      res.json({ "error": "Error checking title" });
     } else {
-      res.json({ "success": "Novel added" });
+      if (results[0][0].title_exists) {
+        res.json({ "error": "Title already exists" });
+      } else {
+        conn.execute(`CALL add_custom_novel(?, ?, ?, ?)`, [`${original}\n${translated}`, text, totalChaps, `${original}\n${translated}\n`], (err, results, fields) => {
+          if (err) {
+            console.log(err);
+            res.json({ "error": "Error adding novel" });
+          } else {
+            res.json({ "success": "Novel added" });
+          }
+        });
+      }
     }
   });
 });
@@ -316,6 +328,28 @@ router.get('/get-novel-text', (req, res) => {
     }
   });
 });
+
+(async () => {
+  const conn2 = await mysql2.createConnection({
+    host: 'localhost',
+    user: 'admin',
+    password: 'pass123',
+    database: 'novel_downloader',
+    multipleStatements: true
+  });
+  router.get('/novel-tags/:id', async (req, res) => {
+    const { id } = req.params;
+    const [rows, fields] = await conn2.execute(`CALL get_novel_tags(?)`, [id]);
+    let tags = rows[0].map(row => row.name);
+    return res.json(tags);
+  });
+  router.get('/synopsis/:id', async (req, res) => {
+    const { id } = req.params;
+    const [rows, fields] = await conn2.execute(`SELECT synopsis FROM novel WHERE id = ?`, [id]);
+    return res.json({synopsis: rows[0].synopsis});
+  });
+})();
+  
 
 router.get('/view-novel-text', (req, res) => {
   const { id } = req.query;
@@ -423,7 +457,7 @@ router.post('/download-novel', async (req, res) => {
           // if (translated[translated.length - 1] != '\n') {
           //   translated += '\n';
           // }
-          let curChap = Math.floor(((chunksToTranslateLength + toTranslatedTranslatedLength) / initToTranslateLength) * lastChap);
+          let curChap = Math.floor(((initToTranslateLength - textToTranslateLeft.length) / initToTranslateLength) * lastChap);
           console.log(`curChap: ${curChap}`);
           if (!textToTranslateLeft) curChap = lastChap;
           conn.execute(`CALL append_to_translated(?, ?, ?)`, [id, combined, curChap], (err, results, fields) => {

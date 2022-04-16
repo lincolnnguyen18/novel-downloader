@@ -15,17 +15,54 @@ CREATE TABLE novel(
   initToTranslateLength INT,
   toTranslatedTranslatedLength INT DEFAULT 0,
   url TEXT NOT NULL,
+  synopsis TEXT,
   PRIMARY KEY (id)
 );
 
+CREATE TABLE tag(
+  id INT NOT NULL AUTO_INCREMENT,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE novel_tags(
+  novel_id INT NOT NULL,
+  tag_id INT NOT NULL,
+  FOREIGN KEY (novel_id) REFERENCES novel(id),
+  FOREIGN KEY (tag_id) REFERENCES tag(id),
+  UNIQUE (novel_id, tag_id)
+);
+
 DELIMITER //
+
+CREATE PROCEDURE add_tag(name VARCHAR(255)) BEGIN
+  INSERT INTO tag(name) VALUES(name);
+END //
 
 CREATE PROCEDURE check_link(_url TEXT) BEGIN
   SELECT COUNT(*) as url_exists FROM novel WHERE url = _url;
 END //
 
+CREATE PROCEDURE check_tag(name VARCHAR(255)) BEGIN
+  SELECT COUNT(*) as tag_exists FROM tag WHERE name = name;
+END //
+
 CREATE PROCEDURE check_title(_title TEXT) BEGIN
   SELECT COUNT(*) as title_exists FROM novel WHERE title = _title;
+END //
+
+CREATE PROCEDURE get_tag_id(name VARCHAR(255)) BEGIN
+  SELECT id FROM tag WHERE name = name;
+END //
+
+CREATE PROCEDURE add_tag_to_novel(novel_id INT, tag_name VARCHAR(255)) BEGIN
+  INSERT INTO novel_tags(novel_id, tag_id) VALUES(novel_id, (SELECT id FROM tag WHERE name = tag_name));
+END //
+
+CREATE PROCEDURE get_novel_tags(novel_id INT) BEGIN
+  SELECT tag.name FROM novel_tags JOIN tag
+  ON novel_tags.tag_id = tag.id
+  WHERE novel_tags.novel_id = novel_id;
 END //
 
 CREATE PROCEDURE add_novel(_title TEXT, _total_chaps INT, _url TEXT, _translated LONGTEXT) BEGIN

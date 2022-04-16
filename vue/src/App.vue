@@ -1,5 +1,6 @@
 <script>
 let beep = new Audio('/beep.mp3');
+import Tags from './Tags.vue'
 const notify = async (message) => {
   beep.play();
   let notification = new Notification("Novel Downloader", {
@@ -39,6 +40,9 @@ export default {
       title: "",
       text: "",
     }
+  },
+  components: {
+    Tags
   },
   methods: {
     closeAddNovel () {
@@ -148,8 +152,11 @@ export default {
         console.log(res)
         if (novel.downloaded_chaps < novel.total_chaps && novel.url) {
           novel.downloaded_chaps += 1
+          console.log('URL NOVEL')
         } else {
           novel.downloaded_chaps = res.curChap;
+          console.log('CUSTOM NOVEL')
+          console.log(res)
         }
         this.downloading = false
         let chunkLength = 600000;
@@ -205,6 +212,8 @@ export default {
         console.log(`scrollTop: ${scrollTop}`)
         if (scrollTop) {
           this.$refs.text.scrollTo(0, scrollTop)
+        } else {
+          this.$refs.text.scrollTo(0, 0)
         }
         // setTimeout(() => {
         //   if (scrollTop) {
@@ -214,11 +223,24 @@ export default {
         // }, 3000)
       })
     },
+    viewSynopsis(novel) {
+      console.log(novel)
+      this.currentNovel = null
+      if (!novel.url) return;
+      this.viewNovelOpen = true
+      fetch(`http://localhost:6001/api/synopsis/${novel.id}`)
+      .then(res => res.json())
+      .then(res => {
+        this.lines = res.synopsis.split('\n')
+      })
+    },
     closeNovelView() {
       // get current scroll position
-      let scrollTop = this.$refs.text.scrollTop;
-      setCookie(this.currentNovel.id, scrollTop);
-      console.log(scrollTop)
+      if (this.currentNovel) {
+        let scrollTop = this.$refs.text.scrollTop;
+        setCookie(this.currentNovel.id, scrollTop);
+        console.log(scrollTop)
+      }
       this.lines = []
       this.viewNovelOpen = false
     }
@@ -228,6 +250,12 @@ export default {
     // this.$refs.rows.innerHTML = html.repeat(100);
     this.loadNovels();
     if (Notification.permission !== "granted") { Notification.requestPermission(); }
+    // listen to escape to close novel view
+    document.addEventListener('keydown', (e) => {
+      if (e.key == 'Escape') {
+        this.closeNovelView()
+      }
+    })
   }
 }
 </script>
@@ -291,15 +319,19 @@ export default {
   </div> -->
   <div class="row" v-for="novel in novels" :class="{'downloading-row': downloading && novel.id == novelIdBeingDownloaded}">
       <div class="left">
-        <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link">
-          <span class="material-icons">open_in_new</span>
+        <!-- <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link"> -->
+        <a @click="viewSynopsis(novel)" class="link">
+         <span class="material-icons">open_in_new</span>
         </a>
         <a :href="novel.url" target="_blank" class="link" v-if="novel.url">
           <span class="material-icons-outlined">link</span>
         </a>
       </div>
       <span>{{ novel.date_added.substring(0, novel.date_added.indexOf('T')) }}</span>
-      <span style="white-space: pre-wrap; padding-right: 5px;" @click="viewNovel(novel)" class="novel-title">{{ novel.title }}</span>
+      <div class="title-wrapper">
+        <span style="white-space: pre-wrap; padding-right: 5px;" @click="viewNovel(novel)" class="novel-title">{{ novel.title }}</span>
+        <Tags :novelId="novel.id" />
+      </div>
       <span
         class="download"
       >{{ novel.downloaded_chaps }}/{{ novel.total_chaps }}
@@ -494,6 +526,9 @@ a.link {
   left: 0;
   z-index: 100;
   overflow: auto;
+}
+.title-wrapper {
+  padding-right: 16px;
 }
 .novel-title {
   cursor: pointer;
