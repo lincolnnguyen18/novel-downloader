@@ -544,28 +544,43 @@ router.post('/download-novel', async (req, res) => {
 
 router.get('/get-novels', (req, res) => {
   let { continue_id, limit, search } = req.query;
+  if (!limit) limit = 10;
   if (!search) search = '';
   // console.log(continue_id, limit);
   if (continue_id) {
-    conn.execute(`CALL get_novels(?, ?, ?)`, [continue_id, limit, search], (err, results, fields) => {
+    conn.execute(`CALL get_novels(?, ?, ?)`, [continue_id, limit, search], async (err, results, fields) => {
       if (err) {
         console.log(err);
         res.json({
           "error": "Error getting novels"
         });
       } else {
-        res.json(results[0]);
+        let novels = results[0];
+        for (let i = 0; i < novels.length; i++) {
+          let novel = novels[i];
+          const [rows, fields] = await conn2.execute(`CALL get_novel_tags(?)`, [novel['id']]);
+          let tags = rows[0].map(row => row.name);
+          novels[i]['tags'] = tags;
+        }
+        res.json(novels);
       }
     });
   } else {
-    conn.execute(`CALL get_novels_init(?, ?)`, [limit, search], (err, results, fields) => {
+    conn.execute(`CALL get_novels_init(?, ?)`, [limit, search], async (err, results, fields) => {
       if (err) {
         console.log(err);
         res.json({
           "error": "Error getting novels"
         });
       } else {
-        res.json(results[0]);
+        let novels = results[0];
+        for (let i = 0; i < novels.length; i++) {
+          let novel = novels[i];
+          const [rows, fields] = await conn2.execute(`CALL get_novel_tags(?)`, [novel['id']]);
+          let tags = rows[0].map(row => row.name);
+          novels[i]['tags'] = tags;
+        }
+        res.json(novels);
       }
     });
   }

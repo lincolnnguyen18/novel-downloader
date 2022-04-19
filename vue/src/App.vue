@@ -24,17 +24,28 @@ const getCookie = (key) => {
 const setCookie = (key, value) => {
   document.cookie = `${key}=${value}`
 }
+const splitArrayIntoChunks = (arr, chunkSize) => {
+  let results = [];
+  while (arr.length) {
+    results.push(arr.splice(0, chunkSize));
+  }
+  return results;
+}
 export default {
   data () {
     return {
+      scrolling: false,
       addNovelOpen: false,
       viewNovelOpen: false,
+      viewingSynopsis: false,
       menuNovel: null,
       currentNovel: null,
       link: '',
       novels: [],
       downloading: false,
       novelIdBeingDownloaded: null,
+      novelChunks: [],
+      novelChunkIndex: 0,
       lines: [],
       search: "",
       addNovelMode: "url",
@@ -79,9 +90,61 @@ export default {
         this.loadMoreNovels()
       }
     },
+    novelProgressbarClick (e) {
+      // console.log(e)
+      // get click y position
+      let y = e.clientY;
+      // get percentage of height
+      let percent = (y / window.innerHeight) * 100;
+      console.log(`clicked at ${percent}%`)
+      let oldIndex = this.novelChunkIndex;
+      // update novelChunkIndex
+      this.novelChunkIndex = Math.floor(percent / 100 * this.novelChunks.length)
+      if (oldIndex !== this.novelChunkIndex) {
+        // update lines
+        this.lines = this.novelChunks[this.novelChunkIndex]
+        // update progressbar
+        this.$refs.novelprogressbar.style.height = `${percent}%`
+      }
+    },
+    onNovelScroll ({ target: { scrollTop, clientHeight, scrollHeight }}) {
+      if (this.viewingSynopsis) return
+      if (scrollTop + clientHeight >= scrollHeight) {
+        // console.log('scrolled to bottom')
+        if (this.novelChunkIndex < this.novelChunks.length - 1) {
+          if (!this.scrolling) {
+            this.novelChunkIndex++
+            console.log('scrolling to chunk', this.novelChunkIndex)
+            this.lines = this.novelChunks[this.novelChunkIndex]
+            this.$refs.novelprogressbar.style.height = `${(this.novelChunkIndex / this.novelChunks.length) * 100}%`
+            // scroll to top
+            this.$refs.text.scrollTop = 0
+            this.scrolling = true
+          } else {
+            this.scrolling = false
+          }
+        }
+      }
+      // detect scroll to top
+      if (scrollTop === 0) {
+        // console.log('scrolled to top')
+        if (!this.scrolling) {
+          if (this.novelChunkIndex > 0) {
+            this.novelChunkIndex--
+            console.log('scrolling to chunk', this.novelChunkIndex)
+            this.lines = this.novelChunks[this.novelChunkIndex]
+            this.$refs.novelprogressbar.style.height = `${(this.novelChunkIndex / this.novelChunks.length) * 100}%`
+            // scroll to bottom
+            this.$refs.text.scrollTo(0, scrollHeight)
+            this.scrolling = true
+          }
+        } else {
+          this.scrolling = false
+        }
+      }
+    },
     openAddNovel() {
       this.addNovelOpen = true
-      this.menuNovel = null
       setTimeout(() => {
         this.$refs.link.select()
       }, 1)
@@ -219,12 +282,19 @@ export default {
     },
     viewNovel(novel) {
       this.viewNovelOpen = true
-      this.menuNovel = null
       this.currentNovel = novel
       fetch('http://localhost:6001/api/view-novel-text?id=' + novel.id)
       .then(res => res.json())
       .then(res => {
-        this.lines = res.text.split('\n')
+        this.novelChunks = splitArrayIntoChunks(res.text.split('\n'), 99)
+        let novelChunkIndex = getCookie(`${novel.id}_chunk_index`)
+        if (novelChunkIndex) {
+          this.novelChunkIndex = parseInt(novelChunkIndex)
+        } else {
+          this.novelChunkIndex = 0
+        }
+        this.lines = this.novelChunks[this.novelChunkIndex]
+        this.$refs.novelprogressbar.style.height = `${(this.novelChunkIndex / this.novelChunks.length) * 100}%`
       })
       .then(() => {
         let scrollTop = getCookie(`${novel.id}`)
@@ -244,8 +314,8 @@ export default {
     },
     viewSynopsis(novel) {
       console.log(novel)
-      this.menuNovel = null
       this.currentNovel = null
+      this.viewingSynopsis = true
       if (!novel.url) return;
       this.viewNovelOpen = true
       fetch(`http://localhost:6001/api/synopsis/${novel.id}`)
@@ -259,10 +329,12 @@ export default {
       if (this.currentNovel) {
         let scrollTop = this.$refs.text.scrollTop;
         setCookie(this.currentNovel.id, scrollTop);
+        setCookie(`${this.currentNovel.id}_chunk_index`, this.novelChunkIndex);
         console.log(scrollTop)
       }
       this.lines = []
       this.viewNovelOpen = false
+      this.viewingSynopsis = false
     }
   },
   mounted () {
@@ -279,14 +351,38 @@ export default {
         this.menuNovel = null
       }
     })
+    // listen to left and right arrow keys
+    document.addEventListener('keydown', (e) => {
+      if (!this.viewNovelOpen || this.viewingSynopsis) return
+      if (e.key == 'ArrowLeft' || e.key == 'a') {
+        if (this.novelChunkIndex > 0) {
+          this.novelChunkIndex--
+          console.log('scrolling to chunk', this.novelChunkIndex)
+          this.lines = this.novelChunks[this.novelChunkIndex]
+          this.$refs.novelprogressbar.style.height = `${(this.novelChunkIndex / this.novelChunks.length) * 100}%`
+        }
+        this.scrolling = true
+        this.$refs.text.scrollTo(0, this.$refs.text.scrollHeight)
+      }
+      if (e.key == 'ArrowRight' || e.key == 'd') {
+        if (this.novelChunkIndex < this.novelChunks.length - 1) {
+          this.novelChunkIndex += 1
+          console.log('scrolling to chunk', this.novelChunkIndex)
+          this.lines = this.novelChunks[this.novelChunkIndex]
+          this.$refs.novelprogressbar.style.height = `${(this.novelChunkIndex / this.novelChunks.length) * 100}%`
+        }
+        this.scrolling = true
+        this.$refs.text.scrollTop = 0
+      }
+    })
   }
 }
 </script>
 
 <template>
-<div class="view-novel-dialog" v-if="viewNovelOpen" ref="text">
+<div class="view-novel-dialog" v-if="viewNovelOpen" ref="text" @scroll="onNovelScroll">
   <span class="material-icons outlined close" @click="closeNovelView">close</span>
-  <div class="text">
+  <div class="text" :class="{bigpadding: !viewingSynopsis}">
     <p v-for="line in lines">{{line}}</p>
   </div>
 </div>
@@ -319,6 +415,8 @@ export default {
   </div>
 </div>
 <div class="progressbar" ref="progressbar"></div>
+<div class="novelprogressbar" ref="novelprogressbar" v-if="viewNovelOpen && !viewingSynopsis" @click.capture="novelProgressbarClick"></div>
+<div class="novelprogressbarbackground" v-if="viewNovelOpen && !viewingSynopsis" @click.capture="novelProgressbarClick" ref="novelProgressbarBackground"></div>
 <div class="search">
   <input type="text" placeholder="Search..." v-model="search" @keyup.enter="loadNovels()">
   <button @click="openAddNovel">Add Novel</button>
@@ -362,7 +460,7 @@ export default {
       <span>{{ novel.date_added.substring(0, novel.date_added.indexOf('T')) }}</span>
       <div class="title-wrapper">
         <span style="white-space: pre-wrap; padding-right: 5px;" @click="viewNovel(novel)" class="novel-title">{{ novel.title }}</span>
-        <Tags :novelId="novel.id" />
+        <Tags :tags="novel.tags"></Tags>
       </div>
       <span
         class="download"
@@ -394,12 +492,12 @@ html, body, #app {
 }
 .header {
   display: grid;
-  grid-template-columns: 260px 700px 150px;
+  grid-template-columns: 230px 700px 150px;
   font-weight: bold;
   padding: 10px 0;
 }
 .header .first {
-  padding-left: 100px;
+  padding-left: 70px;
 }
 .rows {
   height: calc(100% - 39px - 13px - 37px);
@@ -411,7 +509,7 @@ html, body, #app {
 }
 .row {
   display: grid;
-  grid-template-columns: 100px 160px 700px 120px 30px;
+  grid-template-columns: 70px 160px 700px 120px 30px;
   border-bottom: 1px solid #efefef;
   padding: 5px 0;
 }
@@ -549,6 +647,28 @@ a.link {
   margin-bottom: 10px;
   transition: width 0.1s ease;
 }
+.novelprogressbarbackground {
+  height: 100%;
+  width: 3px;
+  background: #efefef;
+  position: absolute;
+  top: 0;
+  left: 0px;
+  z-index: 100;
+  cursor: pointer;
+  opacity: 0.5;
+}
+.novelprogressbar {
+  height: 0;
+  width: 3px;
+  background: black;
+  position: absolute;
+  top: 0;
+  left: 0px;
+  transition: height 0.1s ease;
+  z-index: 101;
+  cursor: pointer;
+}
 .view-novel-dialog {
   height: 100%;
   width: 100%;
@@ -586,6 +706,11 @@ a.link {
   margin: 0 auto;
   word-break: break-word;
 }
+.bigpadding {
+  /* padding-top: 100px;
+  padding-bottom: 200px; */
+  padding: 300px 0;
+}
 .search {
   display: flex;
   justify-content: center;
@@ -608,6 +733,7 @@ a.link {
   border-radius: 7px;
   align-self: center;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+  width: 170px;
 }
 .menu-button {
   height: fit-content;

@@ -2,23 +2,11 @@
 export default {
   name: 'Tags',
   props: {
-    novelId: {
-      type: Number,
+    tags: {
+      type: Array,
       required: true
     },
-  },
-  data() {
-    return {
-      tags: []
-    }
-  },
-  mounted() {
-    fetch(`http://localhost:6001/api/novel-tags/${this.novelId}`)
-    .then(res => res.json())
-    .then(res => {
-      this.tags = res
-    })
-  },
+  }
 }
 </script>
 <template>
