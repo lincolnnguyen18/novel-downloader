@@ -6,12 +6,17 @@ export default {
       type: Array,
       required: true
     },
+  },
+  methods: {
+    tagClick(tag) {
+      this.$emit('tag-click', tag);
+    }
   }
 }
 </script>
 <template>
 <div class="tags">
-  <div v-for="tag in tags" class="tag">{{ tag }}</div>
+  <div v-for="tag in tags" class="tag" @click="tagClick(tag)">{{ tag }}</div>
 </div>
 </template>
 <style scoped>
@@ -30,6 +35,11 @@ export default {
   color: black;
   padding: 4px 8px;
   border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.tag:hover {
+  background: #e0e0e0;
 }
 p {
   margin: 0;

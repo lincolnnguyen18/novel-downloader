@@ -58,6 +58,11 @@ export default {
     Tags
   },
   methods: {
+    tagClick (tag) {
+      // console.log(`tag clicked: ${tag}`)
+      this.search = tag.split('\n')[0]
+      this.loadNovels()
+    },
     openMenu (novel) {
       if (!this.menuNovel || this.menuNovel.id !== novel.id)
         this.menuNovel = novel
@@ -460,7 +465,7 @@ export default {
       <span>{{ novel.date_added.substring(0, novel.date_added.indexOf('T')) }}</span>
       <div class="title-wrapper">
         <span style="white-space: pre-wrap; padding-right: 5px;" @click="viewNovel(novel)" class="novel-title">{{ novel.title }}</span>
-        <Tags :tags="novel.tags"></Tags>
+        <Tags :tags="novel.tags" @tag-click="tagClick"></Tags>
       </div>
       <span
         class="download"
