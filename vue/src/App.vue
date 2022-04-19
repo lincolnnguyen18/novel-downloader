@@ -367,7 +367,9 @@ export default {
           this.$refs.novelprogressbar.style.height = `${(this.novelChunkIndex / this.novelChunks.length) * 100}%`
         }
         this.scrolling = true
-        this.$refs.text.scrollTo(0, this.$refs.text.scrollHeight)
+        setTimeout(() => {
+          this.$refs.text.scrollTo(0, this.$refs.text.scrollHeight)
+        }, 1)
       }
       if (e.key == 'ArrowRight' || e.key == 'd') {
         if (this.novelChunkIndex < this.novelChunks.length - 1) {

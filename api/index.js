@@ -318,6 +318,7 @@ router.post('/add-novel', async (req, res) => {
                   const { original, translated, lang } = res;
                   const combined = joinLines(original, translated);
                   await conn2.query('UPDATE Novel SET synopsis = ? WHERE id = ?', [combined, id]);
+                  await conn2.query(`UPDATE Novel SET translated = CONCAT(translated, '\n\n', ?) WHERE id = ?`, [combined, id]);
                 });
                 res.json({
                   "success": "Novel added"
