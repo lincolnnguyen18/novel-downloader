@@ -276,6 +276,7 @@ export default {
     document.addEventListener('keydown', (e) => {
       if (e.key == 'Escape') {
         this.closeNovelView()
+        this.menuNovel = null
       }
     })
   }
@@ -350,12 +351,11 @@ export default {
           <span class="material-icons">link</span>
         </a> -->
         <div class="menu-wrapper">
-          <span class="material-icons" @click="openMenu(novel)">menu</span>
+          <span class="material-icons menu-button" @click="openMenu(novel)">menu</span>
           <div class="menu" :class="{'hidden': !menuNovel || menuNovel.id != novel.id}">
             <span @click="viewSynopsis(novel)" v-if="novel.url">View Synopsis</span>
-            <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link"><span>Download TXT File</span></a>
-            <a :href="novel.url" target="_blank" class="link" v-if="novel.url">
-            <span>Open in Syosetu</span></a>
+            <span><a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link">Download TXT File</a></span>
+            <span v-if="novel.url"><a :href="novel.url" target="_blank" class="link">Open in Syosetu</a></span>
           </div>
         </div>
       </div>
@@ -598,6 +598,7 @@ a.link {
 .menu-wrapper {
   position: relative;
   display: flex;
+  align-items: center;
 }
 .menu {
   position: absolute;
@@ -607,6 +608,9 @@ a.link {
   border-radius: 7px;
   align-self: center;
   box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+.menu-button {
+  height: fit-content;
 }
 .menu span {
   padding: 10px;
