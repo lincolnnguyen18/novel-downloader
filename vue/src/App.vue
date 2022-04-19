@@ -459,7 +459,7 @@ export default {
           <span class="material-icons menu-button" @click="openMenu(novel)">menu</span>
           <div class="menu" :class="{'hidden': !menuNovel || menuNovel.id != novel.id}">
             <span @click="viewSynopsis(novel)" v-if="novel.url">View Synopsis</span>
-            <span><a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${encodeURIComponent(novel.title.split('\n')[1])}`" class="link">Download TXT File</a></span>
+            <span><a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${encodeURIComponent(novel.title.split('\n')[1].trim())}`" class="link">Download TXT File</a></span>
             <span v-if="novel.url"><a :href="novel.url" target="_blank" class="link">Open in Syosetu</a></span>
           </div>
         </div>
