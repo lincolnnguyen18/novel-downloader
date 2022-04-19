@@ -29,6 +29,7 @@ export default {
     return {
       addNovelOpen: false,
       viewNovelOpen: false,
+      menuNovel: null,
       currentNovel: null,
       link: '',
       novels: [],
@@ -39,12 +40,19 @@ export default {
       addNovelMode: "url",
       title: "",
       text: "",
+      loading: false,
     }
   },
   components: {
     Tags
   },
   methods: {
+    openMenu (novel) {
+      if (!this.menuNovel || this.menuNovel.id !== novel.id)
+        this.menuNovel = novel
+      else
+        this.menuNovel = null
+    },
     closeAddNovel () {
       this.link = ''
       this.title = ''
@@ -73,6 +81,7 @@ export default {
     },
     openAddNovel() {
       this.addNovelOpen = true
+      this.menuNovel = null
       setTimeout(() => {
         this.$refs.link.select()
       }, 1)
@@ -174,8 +183,12 @@ export default {
       })
     },
     loadNovels() {
+      if (this.loading) return
+      this.loading = true
+      setTimeout(() => {
+        this.loading = false
+      }, 100)
       let limit = this.$refs.rows.clientHeight / 35;
-      limit = Math.floor(limit*1.5);
       console.log(`limit: ${limit}`)
       fetch(`http://localhost:6001/api/get-novels?limit=${limit}&search=${this.search.trim()}`)
       .then(res => res.json())
@@ -189,8 +202,13 @@ export default {
       })
     },
     loadMoreNovels() {
+      if (this.loading) return
+      this.loading = true
+      setTimeout(() => {
+        this.loading = false
+      }, 100)
       let limit = this.$refs.rows.clientHeight / 35;
-      limit = Math.floor(limit*1.5);
+      limit = Math.floor(limit*.3);
       console.log(`limit: ${limit}`)
       fetch(`http://localhost:6001/api/get-novels?limit=${limit}&continue_id=${this.novels[this.novels.length - 1].id}&search=${this.search.trim()}`)
       .then(res => res.json())
@@ -201,6 +219,7 @@ export default {
     },
     viewNovel(novel) {
       this.viewNovelOpen = true
+      this.menuNovel = null
       this.currentNovel = novel
       fetch('http://localhost:6001/api/view-novel-text?id=' + novel.id)
       .then(res => res.json())
@@ -225,6 +244,7 @@ export default {
     },
     viewSynopsis(novel) {
       console.log(novel)
+      this.menuNovel = null
       this.currentNovel = null
       if (!novel.url) return;
       this.viewNovelOpen = true
@@ -248,7 +268,9 @@ export default {
   mounted () {
     // let html = this.$refs.rows.innerHTML;
     // this.$refs.rows.innerHTML = html.repeat(100);
-    this.loadNovels();
+    setTimeout(() => {
+      this.loadNovels()
+    }, 1)
     if (Notification.permission !== "granted") { Notification.requestPermission(); }
     // listen to escape to close novel view
     document.addEventListener('keydown', (e) => {
@@ -262,7 +284,7 @@ export default {
 
 <template>
 <div class="view-novel-dialog" v-if="viewNovelOpen" ref="text">
-  <span class="material-icons-outlined close" @click="closeNovelView">close</span>
+  <span class="material-icons outlined close" @click="closeNovelView">close</span>
   <div class="text">
     <p v-for="line in lines">{{line}}</p>
   </div>
@@ -319,13 +341,23 @@ export default {
   </div> -->
   <div class="row" v-for="novel in novels" :class="{'downloading-row': downloading && novel.id == novelIdBeingDownloaded}">
       <div class="left">
-        <!-- <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link"> -->
-        <a @click="viewSynopsis(novel)" class="link">
+        <!-- <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link"><span class="material-icons">open_in_new</span></a> -->
+        <!-- <a @click="viewSynopsis(novel)" class="link">
          <span class="material-icons">open_in_new</span>
         </a>
-        <a :href="novel.url" target="_blank" class="link" v-if="novel.url">
-          <span class="material-icons-outlined">link</span>
-        </a>
+        -->
+        <!-- <a :href="novel.url" target="_blank" class="link" v-if="novel.url">
+          <span class="material-icons">link</span>
+        </a> -->
+        <div class="menu-wrapper">
+          <span class="material-icons" @click="openMenu(novel)">menu</span>
+          <div class="menu" :class="{'hidden': !menuNovel || menuNovel.id != novel.id}">
+            <span @click="viewSynopsis(novel)" v-if="novel.url">View Synopsis</span>
+            <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link"><span>Download TXT File</span></a>
+            <a :href="novel.url" target="_blank" class="link" v-if="novel.url">
+            <span>Open in Syosetu</span></a>
+          </div>
+        </div>
       </div>
       <span>{{ novel.date_added.substring(0, novel.date_added.indexOf('T')) }}</span>
       <div class="title-wrapper">
@@ -559,7 +591,37 @@ a.link {
   justify-content: center;
   gap: 16px;
 }
-.material-icons-outlined {
+.material-icons {
   user-select: none;
+  -webkit-user-select: none;
+}
+.menu-wrapper {
+  position: relative;
+  display: flex;
+}
+.menu {
+  position: absolute;
+  left: 40px;
+  /* top: 45px; */
+  background: white;
+  border-radius: 7px;
+  align-self: center;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+.menu span {
+  padding: 10px;
+  border-bottom: 1px solid #efefef;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+.menu span:hover {
+  background: #f2f2f2;
+}
+.menu span:last-child {
+  border-bottom: none;
+}
+.hidden {
+  display: none;
 }
 </style>
