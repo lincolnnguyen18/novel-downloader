@@ -132,8 +132,8 @@ CREATE PROCEDURE get_novels_init(_limit INT, _search TEXT) BEGIN
   -- LIMIT _limit;
 
   SELECT DISTINCT novel.id, novel.title, novel.downloaded_chaps, novel.total_chaps, novel.url, novel.date_added FROM novel_tags
-  JOIN novel ON novel_tags.novel_id = novel.id
-  JOIN tag ON novel_tags.tag_id = tag.id
+  RIGHT JOIN novel ON novel_tags.novel_id = novel.id
+  LEFT JOIN tag ON novel_tags.tag_id = tag.id
   WHERE tag.name LIKE CONCAT('%', _search, '%') OR novel.title LIKE CONCAT('%', _search, '%')
   GROUP BY novel.id
   ORDER BY novel.id DESC
@@ -154,8 +154,8 @@ CREATE PROCEDURE get_novels(_continue_id INT, _limit INT, _search TEXT) BEGIN
   -- LIMIT _limit;
 
   SELECT DISTINCT novel.id, novel.title, novel.downloaded_chaps, novel.total_chaps, novel.url, novel.date_added FROM novel_tags
-  JOIN novel ON novel_tags.novel_id = novel.id
-  JOIN tag ON novel_tags.tag_id = tag.id
+  RIGHT JOIN novel ON novel_tags.novel_id = novel.id
+  LEFT JOIN tag ON novel_tags.tag_id = tag.id
   WHERE (tag.name LIKE CONCAT('%', _search, '%') OR novel.title LIKE CONCAT('%', _search, '%'))
   AND novel.id < _continue_id
   GROUP BY novel.id
