@@ -653,6 +653,7 @@ a.link {
   position: relative;
   margin-bottom: 10px;
   transition: width 0.1s ease;
+  z-index: 99999;
 }
 .novelprogressbarbackground {
   height: 100%;
