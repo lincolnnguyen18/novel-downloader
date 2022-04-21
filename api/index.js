@@ -313,6 +313,9 @@ router.post('/add-novel', async (req, res) => {
                   try { await conn2.query('CALL add_tag_to_novel(?, ?)', [id, combined]);}
                   catch (err) { }
                 }
+                if (url.includes('novel18')) {
+                  await conn2.query('CALL add_tag_to_novel(?, ?)', [id, 'novel18']);
+                }
                 let chunks = splitText(synop);
                 await translateLong(chunks, async (res) => {
                   const { original, translated, lang } = res;

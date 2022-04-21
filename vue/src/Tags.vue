@@ -33,7 +33,9 @@ export default {
 .tag {
   background: #efefef;
   color: black;
-  padding: 4px 8px;
+  padding: 0 8px;
+  min-height: 29px;
+  line-height: 29px;
   border-radius: 4px;
   cursor: pointer;
   user-select: none;

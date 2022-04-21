@@ -637,7 +637,7 @@ a.link {
   user-select: none;
   cursor: pointer;
 }
-.row .material-icons:hover, a.link:hover {
+.row .material-icons:hover {
   opacity: 0.5;
 }
 .disabled {
