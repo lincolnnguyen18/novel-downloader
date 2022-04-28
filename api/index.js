@@ -73,6 +73,7 @@ const translateLong = async (chunks, callback) => {
     console.log(`Progress: ${(i + 1) / chunks.length * 100}%`);
     await timer(time);
   }
+  translated[translated.length - 1] = translated[translated.length - 1] + '\n';
   callback({ original, translated, lang });
 }
 
@@ -220,7 +221,9 @@ const router = express.Router();
 
 router.post('/delete-novel', async (req, res) => {
   let { id } = req.query;
-  console.log(`Deleting novel ${id}`);
+  const [rows, fields] = await conn2.query(`SELECT * FROM novel WHERE id = ${id}`);
+  let novel = rows[0];
+  console.log(`Deleting novel ${novel.title} with url ${novel.url}`);
   conn.execute('CALL delete_novel(?)', [id], (err, rows, fields) => {
     if (err) {
       console.log(err);
@@ -300,9 +303,12 @@ router.post('/add-novel', async (req, res) => {
                 });
               } else {
                 const { tags, synop } = await getNovelSynopTags(urlWithoutSlashes);
+                // console.log(tags)
+                let tagText = "";
                 for ( let tag of tags ) {
                   let { original, translated } = await translate(tag);
                   let combined = [original, translated].join('\n');
+                  tagText += `${[original, translated].join(' ')}\n`;
                   // console.log(combined)
                   await timer(10);
                   const [rows, fields] = await conn2.query('SELECT id FROM TAG WHERE name = ?', [combined]);
@@ -319,7 +325,10 @@ router.post('/add-novel', async (req, res) => {
                 let chunks = splitText(synop);
                 await translateLong(chunks, async (res) => {
                   const { original, translated, lang } = res;
-                  const combined = joinLines(original, translated);
+                  let combined = tagText;
+                  combined += '\n';
+                  combined += joinLines(original, translated);
+                  // console.log(combined);
                   await conn2.query('UPDATE Novel SET synopsis = ? WHERE id = ?', [combined, id]);
                   await conn2.query(`UPDATE Novel SET translated = CONCAT(translated, '\n\n', ?) WHERE id = ?`, [combined, id]);
                 });
