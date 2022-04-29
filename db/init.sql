@@ -100,6 +100,7 @@ CREATE PROCEDURE append_to_translated(
 ) BEGIN
   UPDATE novel SET translated = CONCAT(translated, _new_translated) WHERE id = _id;
   UPDATE novel SET downloaded_chaps = _new_downloaded_chaps WHERE id = _id;
+  UPDATE novel SET date_added = CURRENT_TIMESTAMP WHERE id = _id;
 END//
 
 CREATE PROCEDURE delete_novel(_id INT) BEGIN
@@ -136,7 +137,7 @@ CREATE PROCEDURE get_novels_init(_limit INT, _search TEXT) BEGIN
   LEFT JOIN tag ON novel_tags.tag_id = tag.id
   WHERE tag.name LIKE CONCAT('%', _search, '%') OR novel.title LIKE CONCAT('%', _search, '%')
   GROUP BY novel.id
-  ORDER BY novel.id DESC
+  ORDER BY novel.date_added DESC
   LIMIT _limit;
 END//
 
@@ -159,7 +160,7 @@ CREATE PROCEDURE get_novels(_continue_id INT, _limit INT, _search TEXT) BEGIN
   WHERE (tag.name LIKE CONCAT('%', _search, '%') OR novel.title LIKE CONCAT('%', _search, '%'))
   AND novel.id < _continue_id
   GROUP BY novel.id
-  ORDER BY novel.id DESC
+  ORDER BY novel.date_added DESC
   LIMIT _limit;
 END//
 

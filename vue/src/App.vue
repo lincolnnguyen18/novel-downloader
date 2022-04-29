@@ -430,7 +430,7 @@ export default {
 </div>
 <div class="novels">
   <div class="header">
-    <span class="first">Date added</span>
+    <span class="first">Date updated</span>
     <span>Title</span>
     <span>Downloaded</span>
   </div>
