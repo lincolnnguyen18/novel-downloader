@@ -412,7 +412,7 @@ export default {
       </div>
       <div v-if="addNovelMode == 'custom'">
         <div class="subtitle">Text</div>
-        <textarea v-model="text" placeholder="Enter text here..." @keyup.enter="title && text && addNovel()"></textarea>
+        <textarea v-model="text" placeholder="Enter text here..."></textarea>
       </div>
     </div>
     <div class="buttons">

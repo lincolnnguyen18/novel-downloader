@@ -398,14 +398,10 @@ router.get('/get-novel-text', (req, res) => {
       console.log(err);
       res.json({ "error": "Error getting novel text" });
     } else {
-      let filename = truncateString(sanitize(title), 50);
+      let filename = truncateString(sanitize(title), 80);
       filename.replace(/\s/g, '_');
-      // replace all commas with underscores
-      filename = filename.replace(/,/g, '_');
-      // replace all dashes with underscores
-      filename = filename.replace(/-/g, '_');
-      // replace all periods with underscores
-      filename = filename.replace(/\./g, '_');
+      // replace all nonalphanumeric characters with underscore
+      filename = filename.replace(/[^a-zA-Z0-9_]/g, '_');
       filename += '.txt';
       res.set({"Content-Disposition":"attachment; filename=" + filename});
       res.set({"Content-Type":"text/plain"});
