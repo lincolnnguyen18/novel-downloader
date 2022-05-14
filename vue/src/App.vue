@@ -156,7 +156,7 @@ export default {
     },
     deleteNovel(novel) {
       if (confirm("Are you sure you want to delete this novel?")) {
-        fetch('http://localhost:6001/api/delete-novel?id=' + novel.id, {
+        fetch('/api/delete-novel?id=' + novel.id, {
           method: 'POST'
         }).then(() => {
           this.novels = this.novels.filter(n => n.id !== novel.id)
@@ -165,7 +165,7 @@ export default {
     },
     addNovel() {
       if (this.addNovelMode == 'url') {
-        fetch('http://localhost:6001/api/add-novel', {
+        fetch('/api/add-novel', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -184,7 +184,7 @@ export default {
           }
         })
       } else {
-        fetch('http://localhost:6001/api/add-custom-novel', {
+        fetch('/api/add-custom-novel', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ export default {
       }
       this.downloading = true
       this.novelIdBeingDownloaded = novel.id
-      fetch('http://localhost:6001/api/download-novel', {
+      fetch('/api/download-novel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ export default {
       }, 100)
       let limit = this.$refs.rows.clientHeight / 35;
       console.log(`limit: ${limit}`)
-      fetch(`http://localhost:6001/api/get-novels?limit=${limit}&search=${this.search.trim()}`)
+      fetch(`/api/get-novels?limit=${limit}&search=${this.search.trim()}`)
       .then(res => res.json())
       .then(res => {
         console.log(res)
@@ -278,7 +278,7 @@ export default {
       let limit = this.$refs.rows.clientHeight / 35;
       limit = Math.floor(limit*.3);
       console.log(`limit: ${limit}`)
-      fetch(`http://localhost:6001/api/get-novels?limit=${limit}&continue_id=${this.novels[this.novels.length - 1].id}&search=${this.search.trim()}`)
+      fetch(`/api/get-novels?limit=${limit}&continue_id=${this.novels[this.novels.length - 1].id}&search=${this.search.trim()}`)
       .then(res => res.json())
       .then(res => {
         console.log(res)
@@ -288,7 +288,7 @@ export default {
     viewNovel(novel) {
       this.viewNovelOpen = true
       this.currentNovel = novel
-      fetch('http://localhost:6001/api/view-novel-text?id=' + novel.id)
+      fetch('/api/view-novel-text?id=' + novel.id)
       .then(res => res.json())
       .then(res => {
         this.novelChunks = splitArrayIntoChunks(res.text.split('\n'), 99)
@@ -323,7 +323,7 @@ export default {
       this.viewingSynopsis = true
       if (!novel.url) return;
       this.viewNovelOpen = true
-      fetch(`http://localhost:6001/api/synopsis/${novel.id}`)
+      fetch(`/api/synopsis/${novel.id}`)
       .then(res => res.json())
       .then(res => {
         this.lines = res.synopsis.split('\n')
@@ -447,7 +447,7 @@ export default {
   </div> -->
   <div class="row" v-for="novel in novels" :class="{'downloading-row': downloading && novel.id == novelIdBeingDownloaded}">
       <div class="left">
-        <!-- <a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link"><span class="material-icons">open_in_new</span></a> -->
+        <!-- <a :href="`/api/get-novel-text?id=${novel.id}&title=${novel.title.split('\n')[1]}`" class="link"><span class="material-icons">open_in_new</span></a> -->
         <!-- <a @click="viewSynopsis(novel)" class="link">
          <span class="material-icons">open_in_new</span>
         </a>
@@ -459,7 +459,7 @@ export default {
           <span class="material-icons menu-button" @click="openMenu(novel)">menu</span>
           <div class="menu" :class="{'hidden': !menuNovel || menuNovel.id != novel.id}">
             <span @click="viewSynopsis(novel)" v-if="novel.url">View Synopsis</span>
-            <span><a :href="`http://localhost:6001/api/get-novel-text?id=${novel.id}&title=${encodeURIComponent(novel.title.split('\n')[1].trim())}`" class="link">Download TXT File</a></span>
+            <span><a :href="`/api/get-novel-text?id=${novel.id}&title=${encodeURIComponent(novel.title.split('\n')[1].trim())}`" class="link">Download TXT File</a></span>
             <span v-if="novel.url"><a :href="novel.url" target="_blank" class="link">Open in Syosetu</a></span>
           </div>
         </div>

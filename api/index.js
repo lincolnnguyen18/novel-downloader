@@ -311,7 +311,7 @@ router.post('/add-novel', async (req, res) => {
                   tagText += `${[original, translated].join(' ')}\n`;
                   // console.log(combined)
                   await timer(10);
-                  const [rows, fields] = await conn2.query('SELECT id FROM TAG WHERE name = ?', [combined]);
+                  const [rows, fields] = await conn2.query('SELECT id FROM tag WHERE name = ?', [combined]);
                   if (rows.length === 0) {
                     await conn2.query('CALL add_tag(?)', [combined]);
                   }
@@ -329,8 +329,8 @@ router.post('/add-novel', async (req, res) => {
                   combined += '\n';
                   combined += joinLines(original, translated);
                   // console.log(combined);
-                  await conn2.query('UPDATE Novel SET synopsis = ? WHERE id = ?', [combined, id]);
-                  await conn2.query(`UPDATE Novel SET translated = CONCAT(translated, '\n\n', ?) WHERE id = ?`, [combined, id]);
+                  await conn2.query('UPDATE novel SET synopsis = ? WHERE id = ?', [combined, id]);
+                  await conn2.query(`UPDATE novel SET translated = CONCAT(translated, '\n\n', ?) WHERE id = ?`, [combined, id]);
                 });
                 res.json({
                   "success": "Novel added"
@@ -596,7 +596,7 @@ router.get('/get-novels', (req, res) => {
 });
 
 app.use('/api', router);
-const port = 6001;
+const port = 9000;
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
 })();
