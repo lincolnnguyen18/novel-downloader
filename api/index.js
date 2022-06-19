@@ -7,6 +7,7 @@ import JSSoup from 'jssoup';
 import htmlToFormattedText from "html-to-formatted-text";
 import sanitize from 'sanitize-filename';
 import { JSDOM } from 'jsdom';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const conn = mysql.createConnection({
   host: 'localhost',
@@ -211,11 +212,11 @@ const app = express();
 app.use(express.json({limit: '2gb'}));
 app.use(cors());
 app.use(express.urlencoded({ extended: true, limit: '2gb' }));
-app.use(express.static('../vue/dist'));
+// app.use(express.static('../vue/dist'));
 
-app.get('/', (req, res) => {
-  res.sendFile('../vue/dist/index.html');
-});
+// app.get('/', (req, res) => {
+//   res.sendFile('../vue/dist/index.html');
+// });
 
 const router = express.Router();
 
@@ -596,7 +597,8 @@ router.get('/get-novels', (req, res) => {
 });
 
 app.use('/api', router);
-const port = 9000;
+app.use('*', createProxyMiddleware({ target: 'http://localhost:1412' }));
+const port = 9001;
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
 })();

@@ -90,7 +90,8 @@ export default {
       this.novels = this.novels.filter(novel => novel.name.toLowerCase().includes(search.toLowerCase()));
     },
     onScroll ({ target: { scrollTop, clientHeight, scrollHeight }}) {
-      if (scrollTop + clientHeight >= scrollHeight) {
+      // if (scrollTop + clientHeight >= scrollHeight) {
+      if (Math.ceil(scrollTop + clientHeight) >= Math.floor(scrollHeight)) {
         console.log('scrolled to bottom')
         this.loadMoreNovels()
       }
@@ -113,8 +114,10 @@ export default {
       }
     },
     onNovelScroll ({ target: { scrollTop, clientHeight, scrollHeight }}) {
+      console.log(scrollTop + clientHeight, scrollHeight);
       if (this.viewingSynopsis) return
-      if (scrollTop + clientHeight >= scrollHeight) {
+      // if (scrollTop + clientHeight >= scrollHeight) {
+      if (Math.ceil(scrollTop + clientHeight) >= Math.floor(scrollHeight)) {
         // console.log('scrolled to bottom')
         if (this.novelChunkIndex < this.novelChunks.length - 1) {
           if (!this.scrolling) {
